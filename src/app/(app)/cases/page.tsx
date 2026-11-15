@@ -88,7 +88,8 @@ export default async function CasesPage({ searchParams }: { searchParams: SP }) 
                       {miss.length ? <Badge tone="warn">ناقصة</Badge> : <Badge tone="ok">مكتملة</Badge>}
                       <div>{c.recvName || <span className="miss">المستلم ناقص</span>}</div>
                       <div>{c.recvIdNo ? <span className="num">{c.recvIdNo}</span> : <span className="miss">الرقم القومي ناقص</span>}</div>
-                      <div>{c.recvMethod || <span className="miss">طريقة الاستلام ناقصة</span>}{c.recvPhone && <span className="num muted"> · {c.recvPhone}</span>}</div>
+                      <div>{c.recvMethod || <span className="miss">طريقة الاستلام ناقصة</span>}</div>
+                      {c.recvPhone && <div className="num muted">{c.recvPhone}</div>}
                       <div>{c.residencyStatus || <span className="miss">الإقامة ناقصة</span>}{c.residencyExpiry && <span className="muted"> · حتى {c.residencyExpiry}</span>}</div>
                     </td>
                   </>
