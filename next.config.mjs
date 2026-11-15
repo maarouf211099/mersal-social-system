@@ -8,8 +8,8 @@ const nextConfig = {
   outputFileTracingRoot: path.dirname(fileURLToPath(import.meta.url)),
   poweredByHeader: false,
   output: "standalone",
-  // استيراد نسخة النظام السابق ممكن يكون كبير
-  experimental: { serverActions: { bodySizeLimit: "25mb" } },
+  // استيراد شيت القرارات / نسخة النظام السابق ممكن يكون كبير
+  experimental: { serverActions: { bodySizeLimit: "60mb" }, middlewareClientMaxBodySize: "60mb" },
   async headers() {
     return [{
       source: "/(.*)",

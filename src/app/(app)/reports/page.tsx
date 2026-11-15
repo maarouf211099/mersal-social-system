@@ -3,7 +3,7 @@ import { requirePageUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { userNames } from "@/lib/users";
-import { lastMonths, metrics, staffStats, type Filter, type Metrics } from "@/lib/metrics";
+import { lastMonths, metrics, staffStats, trends, type Filter, type Metrics } from "@/lib/metrics";
 import { DEC_STATUS_LABELS, GOVS, KIND_LABELS, NATS } from "@/lib/constants";
 import { addMonths, fmtMonth, MONTH_NAMES } from "@/lib/months";
 import { fmtDate, fmtDur, fmtTs, money, pct } from "@/lib/format";
@@ -102,7 +102,8 @@ async function MonthReport({ m, f, followDays, names }: { m: string; f: Filter; 
 
 async function TrendBlock({ m, f, followDays }: { m: string; f: Filter; followDays: number }) {
   const ms = lastMonths(m);
-  const Ms: Metrics[] = await Promise.all(ms.map((x) => metrics(x, f, followDays)));
+  void followDays;
+  const Ms = await trends(ms, f);
   const tm = ms.map((x) => ({ m: x, label: MONTH_NAMES[Number(x.slice(5)) - 1] }));
   return (
     <div className="grid2" style={{ marginTop: 14 }}>

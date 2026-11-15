@@ -9,6 +9,7 @@ import { ActionError, requireAction } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { getSettings } from "@/lib/settings";
 import { importV1 } from "@/lib/import-v1";
+import { importDecisionsSheet } from "@/lib/import-decisions";
 
 const ROLES: Role[] = ["admin", "supervisor", "finance", "staff", "viewer"];
 function tempPassword() {
@@ -109,7 +110,8 @@ export async function importData(_p: State, f: FormData): Promise<State> {
     if (!(file instanceof File) || !file.size) return { error: "اختار ملف النسخة الاحتياطية (JSON)." };
     let data: any;
     try { data = JSON.parse(await file.text()); } catch { return { error: "الملف غير صالح (ليس JSON)." }; }
-    const res = await importV1(data, u.id);
+    // ملف شيت القرارات المنظّف، أو نسخة النظام السابق (HTML)
+    const res = data?.format === "mersal-social-decisions/1" ? await importDecisionsSheet(data, u.id) : await importV1(data, u.id);
     revalidatePath("/", "layout");
     return { ok: res };
   } catch (e) {

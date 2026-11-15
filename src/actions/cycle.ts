@@ -54,10 +54,10 @@ export async function generateMonth(_p: State, f: FormData): Promise<State> {
     const st = await getSettings();
     const lines = await prisma.decisionLine.findMany({
       where: { decision: { status: "active" }, startMonth: { lte: m }, endMonth: { gte: m } },
-      include: { service: true, decision: true },
+      include: { service: true, decision: true, _count: { select: { entitlements: true } } },
     });
-    // الشهري والتغطية: استحقاق كل شهر · مرة واحدة: في شهر البداية فقط
-    const eligible = lines.filter((l) => l.service.cycle !== "once" || l.startMonth === m);
+    // الشهري والتغطية: استحقاق كل شهر · مرة واحدة: مرة بس، في أول شهر يتولد فيه جوه مدته (لو ما اتنفذتش في شهر البداية)
+    const eligible = lines.filter((l) => l.service.cycle !== "once" || l._count.entitlements === 0);
     const existing = new Set((await prisma.entitlement.findMany({ where: { month: m, lineId: { in: eligible.map((l) => l.id) } }, select: { lineId: true } })).map((e) => e.lineId));
     const todo = eligible.filter((l) => !existing.has(l.id));
     if (!todo.length) fail(`لا توجد استحقاقات جديدة لـ${fmtMonth(m)}. لا يُنشأ استحقاق بعد تاريخ نهاية القرار.`);

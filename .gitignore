@@ -8,3 +8,9 @@ node_modules/
 next-env.d.ts
 tsconfig.tsbuildinfo
 uploads/
+# ملفات بيانات المستفيدين — ممنوع ترتفع
+*.xlsx
+*.xls
+*.csv
+decisions-import.json
+review-report*

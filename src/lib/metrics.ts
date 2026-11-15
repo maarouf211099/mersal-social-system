@@ -123,3 +123,22 @@ export async function staffStats(m: string, f: Filter = {}): Promise<StaffRow[]>
 }
 
 export const lastMonths = (m: string, n = 6) => Array.from({ length: n }, (_, i) => addMonths(m, i - n + 1));
+
+/** أرقام الاتجاه (آخر شهور) مجمعة مباشرة من القاعدة — سريعة مع أي حجم بيانات */
+export async function trends(months: string[], f: Filter = {}) {
+  const first = months[0], last = months[months.length - 1];
+  const caseF = hasCaseF(f) ? { case: caseWhere(f) } : {};
+  const entWhere = { month: { gte: first, lte: last }, ...(f.svc ? { line: { serviceId: f.svc } } : {}), ...caseF };
+  const [tr, legacy, ref, recv, ops] = await Promise.all([
+    prisma.transfer.findMany({ where: { entitlement: entWhere }, select: { amount: true, entitlement: { select: { month: true } } } }),
+    prisma.entitlement.findMany({ where: { ...entWhere, legacySent: true, transfer: null, line: { ...(f.svc ? { serviceId: f.svc } : {}), service: { kind: "financial" } } }, select: { month: true, amount: true } }),
+    prisma.refund.groupBy({ by: ["month"], where: { month: { gte: first, lte: last }, ...(f.svc ? { entitlement: { line: { serviceId: f.svc } } } : {}), ...(hasCaseF(f) ? { entitlement: { case: caseWhere(f) } } : {}) }, _sum: { amount: true } }),
+    prisma.entitlement.findMany({ where: { ...entWhere, stoppedAt: null, OR: [{ followResult: "received" }, { sentAt: { not: null }, line: { service: { kind: { in: ["in_kind", "service"] }, needsFollow: false } } }] }, select: { month: true, caseCode: true }, distinct: ["month", "caseCode"] }),
+    prisma.operation.findMany({ where: { date: { gte: dayRange(first).gte, lt: dayRange(last).lt }, ...(f.staff ? { userId: f.staff } : {}) }, select: { date: true, count: true } }),
+  ]);
+  return months.map((m) => {
+    const transferred = tr.filter((t) => t.entitlement.month === m).reduce((s, t) => s + Number(t.amount), 0) + legacy.filter((e) => e.month === m).reduce((s, e) => s + Number(e.amount), 0);
+    const refunded = Number(ref.find((r) => r.month === m)?._sum.amount ?? 0);
+    return { m, net: transferred - refunded, beneficiaries: recv.filter((r) => r.month === m).length, opsTotal: ops.filter((o) => o.date.toISOString().slice(0, 7) === m).reduce((s, o) => s + (o.count || 1), 0) };
+  });
+}

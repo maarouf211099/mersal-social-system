@@ -4,13 +4,14 @@ import { str, dateOf } from "./action";
 import { CASE_FIELDS } from "./constants";
 import { isoDate } from "./format";
 
-const TEXT_FIELDS = ["name", "gender", "nationality", "governorate", "address", "phone", "phone2", "unhcr", "recvMethod", "recvName", "recvPhone", "recvIdNo", "recvBranch", "notes"] as const;
+const TEXT_FIELDS = ["name", "gender", "nationality", "governorate", "area", "address", "religion", "description", "residencyStatus", "residencyExpiry", "idExpiry", "phone", "phone2", "unhcr", "recvMethod", "recvName", "recvPhone", "recvIdNo", "recvBranch", "notes"] as const;
 
 /** يقرأ حقول الحالة من الفورم (الحقول غير الموجودة في الفورم لا تُلمس) */
 export function readCaseFields(f: FormData) {
   const out: Record<string, string | number | Date | null> = {};
   for (const k of TEXT_FIELDS) if (f.has(k)) out[k] = str(f, k);
   if (f.has("birthDate")) out.birthDate = dateOf(str(f, "birthDate"));
+  if (f.has("age")) { const n = Number(str(f, "age")); out.age = n > 0 && n < 120 ? Math.floor(n) : null; }
   if (f.has("familySize")) { const n = Number(str(f, "familySize")); out.familySize = n > 0 ? Math.floor(n) : null; }
   return out;
 }

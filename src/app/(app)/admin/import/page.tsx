@@ -10,18 +10,22 @@ export default async function ImportPage() {
   return (
     <>
       <PageHead title="استيراد بيانات النظام السابق" sub="ينقل الحالات والقرارات والاستحقاقات والتحويلات والمتابعات والاستردادات والعمليات من نسخة النظام السابق (صفحة HTML) إلى قاعدة البيانات." />
-      <div className="card w-narrow">
-        <ol className="muted" style={{ paddingInlineStart: 18, lineHeight: 2 }}>
-          <li>من النظام السابق: «الإعدادات» ← «تصدير نسخة كاملة (JSON)».</li>
-          <li>ارفع الملف هنا. الاستيراد كله في عملية واحدة: يا ينجح كله، يا مايتحفظش أي حاجة.</li>
-          <li>الموظفون في النظام السابق يتسجلوا كحسابات موقوفة بأسمائهم، عشان تاريخ عملياتهم يفضل منسوب ليهم.</li>
-        </ol>
-        {count > 0 ? <div className="alert warn">قاعدة البيانات فيها {count} حالة بالفعل. الاستيراد متاح مرة واحدة على قاعدة فاضية فقط.</div> : (
+      <div className="grid2">
+        <div className="card">
+          <div className="card-title"><h2>رفع ملف</h2></div>
           <ActionForm action={importData}>
-            <label className="field"><span>ملف النسخة (JSON)</span><input type="file" name="file" accept=".json,application/json" required /></label>
-            <div><Submit pendingText="جارٍ الاستيراد…">استيراد</Submit></div>
+            <label className="field"><span>الملف (JSON)</span><input type="file" name="file" accept=".json,application/json" required /></label>
+            <div><Submit pendingText="جارٍ الاستيراد… (ممكن ياخد دقيقة)">استيراد</Submit></div>
           </ActionForm>
-        )}
+          <p className="muted" style={{ marginTop: 10 }}>الاستيراد كله في عملية واحدة: يا ينجح كله، يا مايتحفظش أي حاجة.</p>
+        </div>
+        <div className="card">
+          <div className="card-title"><h2>الملفات المقبولة</h2></div>
+          <ol className="muted" style={{ paddingInlineStart: 18, lineHeight: 2, margin: 0 }}>
+            <li><b>سجل القرارات (Excel منظّف)</b> — ملف <span className="num">decisions-import.json</span> الناتج من شيت القرارات السنوي. الحالات الجديدة تتسجل، والموجودة تتكمل خاناتها الفاضية بس، ورفعه مرتين ما بيكررش أي قرار.</li>
+            <li><b>نسخة النظام السابق (صفحة HTML)</b> — من «الإعدادات ← تصدير نسخة كاملة». مرة واحدة على قاعدة فاضية ({count ? `فيها ${count} حالة دلوقتي` : "فاضية دلوقتي"}).</li>
+          </ol>
+        </div>
       </div>
     </>
   );

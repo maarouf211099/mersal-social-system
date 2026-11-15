@@ -3,7 +3,7 @@ import { requirePageUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { userNames } from "@/lib/users";
-import { lastMonths, metrics, staffStats } from "@/lib/metrics";
+import { lastMonths, metrics, staffStats, trends } from "@/lib/metrics";
 import { STAGES, type Stage } from "@/lib/stage";
 import { KIND_LABELS } from "@/lib/constants";
 import { addMonths, currentMonth, fmtMonth, MONTH_NAMES } from "@/lib/months";
@@ -26,7 +26,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
     prisma.refund.count({ where: { settlement: "pending" } }),
     prisma.decisionLine.groupBy({ by: ["decisionId"], where: { decision: { status: "active", renewalStatus: "none" } }, _max: { endMonth: true } }),
     prisma.decisionLine.groupBy({ by: ["decisionId"], where: { decision: { status: "active" } }, _max: { endMonth: true } }),
-    Promise.all(lastMonths(m).map(async (x) => ({ m: x, M: await metrics(x, {}, st.followDays) }))),
+    trends(lastMonths(m)),
   ]);
   const soon = renewSoon.filter((g) => g._max.endMonth! >= cm && g._max.endMonth! <= addMonths(cm, st.renewLead)).length;
   const ended = endedOpen.filter((g) => g._max.endMonth! < cm).length;
@@ -88,8 +88,8 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       <div className="section-title"><h2>مؤشرات الموظفين</h2><span className="muted">المسند = مهام أُسندت للموظف · نفّذ بنفسه = ما نفّذه فعلاً حتى لو كان مسنداً لغيره</span></div>
       <div className="card"><StaffTable rows={staff} names={names} m={m} /></div>
       <div className="grid2" style={{ marginTop: 14 }}>
-        <div className="card"><div className="card-title"><h2>صافي المصروف · آخر 6 شهور</h2></div><Trend months={tm} values={trendM.map((x) => x.M.net)} fmt={money} /></div>
-        <div className="card"><div className="card-title"><h2>العمليات المنفذة · آخر 6 شهور</h2></div><Trend months={tm} values={trendM.map((x) => x.M.opsTotal)} /></div>
+        <div className="card"><div className="card-title"><h2>صافي المصروف · آخر 6 شهور</h2></div><Trend months={tm} values={trendM.map((x) => x.net)} fmt={money} /></div>
+        <div className="card"><div className="card-title"><h2>العمليات المنفذة · آخر 6 شهور</h2></div><Trend months={tm} values={trendM.map((x) => x.opsTotal)} /></div>
       </div>
     </>
   );

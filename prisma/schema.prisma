@@ -54,6 +54,14 @@ model Case {
   recvIdNo      String    @default("")
   recvBranch    String    @default("")
   notes         String    @default("")
+  // من شيت القرارات السنوي
+  age             Int? // السن المسجل (لو تاريخ الميلاد مش موجود)
+  religion        String  @default("")
+  area            String  @default("") // المنطقة
+  description     String  @default("") // وصف الحالة
+  residencyStatus String  @default("") // موقف الإقامة
+  residencyExpiry String  @default("")
+  idExpiry        String  @default("") // تاريخ انتهاء الرقم القومي
   dataConfirmed Boolean   @default(false)
   confirmedAt   DateTime?
   confirmedById String?
@@ -142,6 +150,9 @@ model Decision {
   renewalAt     DateTime?
   renewalById   String?
   renewalNote   String         @default("")
+  needsDonation Boolean        @default(false) // «تحتاج لتبرع»
+  sourceStatus  String         @default("") // الموقف كما كان في الشيت (للمراجعة)
+  importKey     String?        @unique // يمنع تكرار القرار لو الملف اترفع مرتين
   createdAt     DateTime       @default(now())
   createdById   String?
   case          Case           @relation(fields: [caseCode], references: [code])
@@ -162,6 +173,9 @@ model DecisionLine {
   endMonth     String // YYYY-MM
   mismatchNote String        @default("")
   extendedBy   Int           @default(0)
+  beneficiary  String        @default("") // المستفيد لو غير صاحب الملف (أسرة فيها أكثر من مستفيد)
+  category     String        @default("") // تصنيف (مثلاً حفاضات: مرضية / عادية)
+  note         String        @default("")
   decision     Decision      @relation(fields: [decisionId], references: [id])
   service      Service       @relation(fields: [serviceId], references: [id])
   entitlements Entitlement[]

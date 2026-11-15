@@ -5,8 +5,8 @@ import { createDecision } from "@/actions/decisions";
 import { ActionForm, Submit } from "./forms";
 
 type Svc = { id: string; name: string; kind: string; cycle: string };
-type Running = { serviceId: string; start: string; end: string; no: string };
-type Line = { svc: string; amount: string; months: number; start: string; end: string; note: string; touchedEnd: boolean };
+type Running = { serviceId: string; start: string; end: string; no: string; beneficiary: string };
+type Line = { svc: string; amount: string; months: number; start: string; end: string; note: string; touchedEnd: boolean; beneficiary: string };
 
 const MN = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 const toIdx = (m: string) => { const [y, mo] = m.split("-").map(Number); return y * 12 + mo - 1; };
@@ -17,16 +17,16 @@ const fmt = (m: string) => (m ? `${MN[Number(m.slice(5)) - 1]} ${m.slice(0, 4)}`
 const suggest = (iso: string) => { if (!iso) return ""; const [y, m, d] = iso.split("-").map(Number); return add(`${y}-${String(m).padStart(2, "0")}`, d <= 18 ? 1 : 2); };
 
 export function DecisionForm({ services, cases, init, canOverride }: {
-  services: Svc[]; cases: { code: string; name: string; running: Running[] }[];
-  init: { code?: string; renewOf?: string; donor?: string; text?: string; startAfter?: string; lines?: { svc: string; amount: string; months: number }[] };
+  services: Svc[]; cases: { code: string; name: string; running: Running[]; beneficiaries: string[] }[];
+  init: { code?: string; renewOf?: string; donor?: string; text?: string; startAfter?: string; lines?: { svc: string; amount: string; months: number; beneficiary?: string }[] };
   canOverride: boolean;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const [code, setCode] = useState(init.code ?? "");
   const [issue, setIssue] = useState(today);
   const base = init.startAfter ? add(init.startAfter, 1) : suggest(today);
-  const mk = (svc: string, amount: string, months: number, start = base): Line => ({ svc, amount, months, start, end: add(start, months - 1), note: "", touchedEnd: false });
-  const [lines, setLines] = useState<Line[]>(init.lines?.length ? init.lines.map((l) => mk(l.svc, l.amount, l.months)) : [mk(services[0]?.id ?? "", "", 6)]);
+  const mk = (svc: string, amount: string, months: number, start = base, beneficiary = ""): Line => ({ svc, amount, months, start, end: add(start, months - 1), note: "", touchedEnd: false, beneficiary });
+  const [lines, setLines] = useState<Line[]>(init.lines?.length ? init.lines.map((l) => mk(l.svc, l.amount, l.months, base, l.beneficiary ?? "")) : [mk(services[0]?.id ?? "", "", 6)]);
   const found = cases.find((c) => c.code === code.trim());
   const set = (i: number, p: Partial<Line>) => setLines((ls) => ls.map((l, j) => {
     if (j !== i) return l;
@@ -37,7 +37,7 @@ export function DecisionForm({ services, cases, init, canOverride }: {
     return n;
   }));
   const months = useMemo(() => { const out: string[] = []; const c = suggest(today); for (let i = -24; i <= 36; i++) out.push(add(c, i)); return out; }, [today]);
-  const conflicts = lines.map((l) => found?.running.find((r) => r.serviceId === l.svc && !(l.end < r.start || l.start > r.end)));
+  const conflicts = lines.map((l) => found?.running.find((r) => r.serviceId === l.svc && r.beneficiary === l.beneficiary.trim() && !(l.end < r.start || l.start > r.end)));
   return (
     <ActionForm action={createDecision}>
       <input type="hidden" name="renewOf" value={init.renewOf ?? ""} />
@@ -64,6 +64,7 @@ export function DecisionForm({ services, cases, init, canOverride }: {
               <label className="field"><span>{s?.kind === "financial" ? "القيمة الشهرية (جنيه)" : "القيمة / التكلفة (جنيه)"}</span><input type="number" min={0} name="amount" value={l.amount} onChange={(e) => set(i, { amount: e.target.value })} required /></label>
               <label className="field"><span>مدة القرار (شهر)</span><input type="number" min={1} name="months" value={l.months} onChange={(e) => set(i, { months: Math.max(1, Number(e.target.value) || 1) })} /></label>
               <label className="field"><span>من شهر</span><select name="start" value={l.start} onChange={(e) => set(i, { start: e.target.value })}>{months.map((m) => <option key={m} value={m}>{fmt(m)}</option>)}</select></label>
+              <label className="field"><span>المستفيد (لو غير صاحب الملف)</span><input name="beneficiary" list={`bens-${i}`} value={l.beneficiary} onChange={(e) => set(i, { beneficiary: e.target.value })} placeholder="مثال: اسم الطفل" /><datalist id={`bens-${i}`}>{(found?.beneficiaries ?? []).map((b) => <option key={b} value={b} />)}</datalist></label>
               <label className="field"><span>إلى شهر</span><select name="end" value={l.end} onChange={(e) => set(i, { end: e.target.value, touchedEnd: true })}>{months.map((m) => <option key={m} value={m}>{fmt(m)}</option>)}</select></label>
             </div>
             {mis ? <><div className="muted" style={{ color: "var(--bad)" }}>المدة المكتوبة {l.months} شهر والمحسوبة من التواريخ {n} شهر. اكتب ملاحظة توضح السبب.</div><textarea name="note" value={l.note} onChange={(e) => set(i, { note: e.target.value })} placeholder="سبب الاختلاف" /></>

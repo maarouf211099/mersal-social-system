@@ -72,7 +72,7 @@ export default async function CyclePage({ searchParams }: { searchParams: SP }) 
               <tr key={e.id}>
                 <td><input type="checkbox" name="ids" value={e.id} aria-label="تحديد" /></td>
                 <td><CaseLink code={e.caseCode} name={e.case.name} /></td>
-                <td>{e.serviceName}{e.resendCount > 0 && <span className="cell-sub">أُعيد الإرسال ×{e.resendCount}</span>}</td>
+                <td>{e.serviceName}{e.line.beneficiary && <span className="cell-sub">المستفيد: {e.line.beneficiary}</span>}{e.resendCount > 0 && <span className="cell-sub">أُعيد الإرسال ×{e.resendCount}</span>}</td>
                 <td className="nowrap">{money(e.amountN)}{Number(e.carriedAmount) > 0 && <span className="cell-sub">+{money(e.carriedAmount)} مرحّل</span>}</td>
                 <td><Link href={`/cycle/${e.id}`}><StageBadge stage={e.stage} kind={e.kind} /></Link><Steps e={e} /></td>
                 <td className="nowrap">{e.sentAt ? <>{fmtTs(e.sentAt)}<span className="cell-sub">{names.name(e.sentById)}</span></> : "—"}</td>

@@ -23,7 +23,7 @@ export async function correctLine(_p: State, f: FormData): Promise<State> {
     const lastSent = await prisma.entitlement.findFirst({ where: { lineId: id, OR: [{ sentAt: { not: null } }, { legacySent: true }] }, orderBy: { month: "desc" } });
     if (lastSent && endMonth < lastSent.month) fail(`لا يمكن إنهاء الخدمة قبل ${fmtMonth(lastSent.month)} لأنه اتصرف بالفعل.`);
     if (endMonth > l.endMonth) {
-      const clash = await prisma.decisionLine.findFirst({ where: { id: { not: id }, caseCode: l.caseCode, serviceId: l.serviceId, decision: { status: "active" }, startMonth: { lte: endMonth }, endMonth: { gte: l.startMonth } }, include: { decision: true } });
+      const clash = await prisma.decisionLine.findFirst({ where: { id: { not: id }, caseCode: l.caseCode, serviceId: l.serviceId, beneficiary: l.beneficiary, decision: { status: "active" }, startMonth: { lte: endMonth }, endMonth: { gte: l.startMonth } }, include: { decision: true } });
       if (clash) fail(`التمديد يتعارض مع قرار ${clash.decision.no} لنفس الخدمة.`);
     }
     const old = { amount: Number(l.amount), endMonth: l.endMonth };
@@ -83,5 +83,15 @@ export async function correctTransfer(_p: State, f: FormData): Promise<State> {
       await logAudit(tx, u.id, "transfer_corrected", t.entitlement.caseCode, { month: t.entitlement.month, old, new: { amount, method, date: isoDate(date), ref }, reason });
     });
     return "تم تصحيح التحويل، والقيمة القديمة محفوظة في سجل التدقيق.";
+  });
+}
+
+/** علامة «تحتاج لتبرع» على القرار — تتشال لما يتلاقى متبرع */
+export async function setNeedsDonation(_p: State, f: FormData): Promise<State> {
+  return run("approve", async (u) => {
+    const id = str(f, "id"), on = str(f, "on") === "1", note = str(f, "note");
+    const d = await prisma.decision.update({ where: { id }, data: { needsDonation: on, ...(note && !on ? { donor: note } : {}) } });
+    await prisma.auditLog.create({ data: { userId: u.id, action: "donation_flag", target: d.caseCode, meta: { no: d.no, needsDonation: on, donor: note || undefined } } });
+    return on ? "اتسجل القرار «تحتاج لتبرع»." : "اتشالت علامة «تحتاج لتبرع».";
   });
 }

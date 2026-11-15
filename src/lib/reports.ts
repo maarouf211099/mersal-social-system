@@ -14,8 +14,8 @@ export async function exportRows(kind: string, m: string, f: Filter, extra: Reco
   const names = await userNames();
   if (kind === "month") {
     const M = await metrics(m, f, st.followDays);
-    return { name: `تقرير-${m}`, rows: [["الكود", "الاسم", "المحافظة", "الجنسية", "الخدمة", "القيمة", "الموقف", "المحوّل", "مرجع التحويل", "المسترد", "وصل للمستفيد", "محاولات المتابعة", "أرسله", "تاريخ الإرسال"],
-      ...M.ents.map((e) => [e.caseCode, e.case.name, e.case.governorate, e.case.nationality, e.serviceName, e.amountN, STAGES[e.stage].label, e.transferred, e.transfer?.ref ?? "", e.refundTotal, e.received, e.attempts.length, names.name(e.sentById), fmtTs(e.sentAt)])] };
+    return { name: `تقرير-${m}`, rows: [["الكود", "الاسم", "المحافظة", "الجنسية", "الخدمة", "المستفيد", "القيمة", "الموقف", "المحوّل", "مرجع التحويل", "المسترد", "وصل للمستفيد", "محاولات المتابعة", "أرسله", "تاريخ الإرسال"],
+      ...M.ents.map((e) => [e.caseCode, e.case.name, e.case.governorate, e.case.nationality, e.serviceName, e.line.beneficiary, e.amountN, STAGES[e.stage].label, e.transferred, e.transfer?.ref ?? "", e.refundTotal, e.received, e.attempts.length, names.name(e.sentById), fmtTs(e.sentAt)])] };
   }
   if (kind === "staff") {
     const rows = await staffStats(m, f);

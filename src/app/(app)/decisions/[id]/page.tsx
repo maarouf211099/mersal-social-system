@@ -7,7 +7,7 @@ import { userNames } from "@/lib/users";
 import { DEC_STATUS_LABELS } from "@/lib/constants";
 import { addMonths, fmtMonth, monthOptions } from "@/lib/months";
 import { fmtDate, fmtTs, isoDate, money } from "@/lib/format";
-import { correctDecision, correctLine } from "@/actions/corrections";
+import { correctDecision, correctLine, setNeedsDonation } from "@/actions/corrections";
 import { Badge, CaseLink, PageHead, Table } from "@/components/ui";
 import { ActionForm, Submit } from "@/components/forms";
 
@@ -30,7 +30,7 @@ export default async function DecisionPage({ params }: { params: Promise<{ id: s
         <div className="kv">
           <div><span>تاريخ القرار</span>{fmtDate(d.issueDate)}</div><div><span>المتبرع</span>{d.donor || "—"}</div>
           <div><span>سجّله</span>{names.name(d.createdById)} · {fmtTs(d.createdAt)}</div>{d.overrideNote && <div><span>اعتماد تعارض</span>{d.overrideNote}</div>}
-          {d.stopReason && <div><span>سبب الإيقاف</span>{d.stopReason}</div>}
+          {d.stopReason && <div><span>سبب الإيقاف</span>{d.stopReason}</div>}{d.sourceStatus && <div><span>الموقف في شيت القرارات</span>{d.sourceStatus}</div>}{d.needsDonation && <div><span>التمويل</span><Badge tone="warn">تحتاج لتبرع</Badge></div>}
         </div>
         {d.text && <p className="muted" style={{ marginTop: 10 }}>{d.text}</p>}
       </div>
@@ -41,7 +41,7 @@ export default async function DecisionPage({ params }: { params: Promise<{ id: s
             const sent = l.entitlements.filter((e) => e.sentAt || e.legacySent).map((e) => e.month).sort().at(-1);
             return (
               <tr key={l.id}>
-                <td>{l.service.name}</td><td>{money(l.amount)}</td>
+                <td>{l.service.name}{l.beneficiary && <span className="cell-sub">المستفيد: {l.beneficiary}</span>}{l.category && <span className="cell-sub">{l.category}</span>}{l.note && <span className="cell-sub">{l.note}</span>}</td><td>{money(l.amount)}</td>
                 <td className="nowrap">{fmtMonth(l.startMonth)} ← {fmtMonth(l.endMonth)}<span className="cell-sub">{l.months} شهر{l.extendedBy ? ` · مُدد ${l.extendedBy}` : ""}{l.mismatchNote ? ` · ${l.mismatchNote}` : ""}</span></td>
                 <td>{sent ? fmtMonth(sent) : "—"}</td>
                 <td>{edit && (
@@ -58,6 +58,15 @@ export default async function DecisionPage({ params }: { params: Promise<{ id: s
           })}
         </Table>
       </div>
+      {edit && (
+        <details className="box" style={{ marginTop: 14 }}><summary>{d.needsDonation ? "شيل علامة «تحتاج لتبرع» (اتلاقى متبرع)" : "علّم القرار «تحتاج لتبرع»"}</summary>
+          <ActionForm action={setNeedsDonation} className="row">
+            <input type="hidden" name="id" value={d.id} /><input type="hidden" name="on" value={d.needsDonation ? "0" : "1"} />
+            {d.needsDonation && <label className="field"><span>اسم المتبرع (اختياري)</span><input name="note" /></label>}
+            <div className="auto"><Submit className="btn secondary">حفظ</Submit></div>
+          </ActionForm>
+        </details>
+      )}
       {edit && (
         <details className="box" style={{ marginTop: 14 }}><summary>تصحيح بيانات القرار (الرقم، التاريخ، المتبرع، النص)</summary>
           <ActionForm action={correctDecision}>

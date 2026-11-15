@@ -46,12 +46,12 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
       {dups.length > 0 && <div className="alert warn"><Icon.alert /><span>بيانات مشتركة مع حالات أخرى (راجع احتمال التكرار): {dups.map((d, i) => <span key={i}>{i ? " · " : ""}{d.field}: {d.codes.map((x, j) => <span key={x}>{j ? "، " : ""}<a className="strong" href={`/cases/${encodeURIComponent(x)}`}>{x}</a></span>)}</span>)}</span></div>}
       <div className="card">
         <div className="kv">
-          {kv("الجنسية", c.nationality)}{kv("النوع", c.gender)}{kv("الميلاد", c.birthDate ? `${fmtDate(c.birthDate)} (${age(c.birthDate)} سنة)` : "")}{kv("عدد الأفراد", c.familySize)}
-          {kv("المحافظة", c.governorate)}{kv("العنوان", c.address)}{kv("هاتف", <span className="num">{[c.phone, c.phone2].filter(Boolean).join(" / ")}</span>)}{kv("رقم المفوضية", <span className="num">{c.unhcr}</span>)}
-          {kv("طريقة الاستلام", c.recvMethod)}{kv("المستلم", c.recvName)}{kv("رقم الاستلام", <span className="num">{c.recvPhone}</span>)}{kv("إثبات الشخصية", <span className="num">{c.recvIdNo}</span>)}
+          {kv("الجنسية", c.nationality)}{kv("الديانة", c.religion)}{kv("النوع", c.gender)}{kv(c.birthDate ? "الميلاد" : "السن", c.birthDate ? `${fmtDate(c.birthDate)} (${age(c.birthDate)} سنة)` : c.age ? `${c.age} سنة` : "")}{kv("عدد الأفراد", c.familySize)}
+          {kv("المحافظة", c.governorate)}{kv("المنطقة", c.area)}{kv("العنوان", c.address)}{kv("موقف الإقامة", [c.residencyStatus, c.residencyExpiry && `حتى ${c.residencyExpiry}`].filter(Boolean).join(" · "))}{kv("هاتف", <span className="num">{[c.phone, c.phone2].filter(Boolean).join(" / ")}</span>)}{kv("رقم المفوضية", <span className="num">{c.unhcr}</span>)}
+          {kv("طريقة الاستلام", c.recvMethod)}{kv("المستلم", c.recvName)}{kv("رقم الاستلام", <span className="num">{c.recvPhone}</span>)}{kv("إثبات الشخصية", <><span className="num">{c.recvIdNo}</span>{c.idExpiry && <span className="cell-sub">ينتهي {c.idExpiry}</span>}</>)}
           {kv("الفرع / مكتب البريد", c.recvBranch)}{kv("سُجلت", `${fmtTs(c.createdAt)} · ${names.name(c.createdById)}`)}
         </div>
-        {c.notes && <p className="muted" style={{ marginTop: 10 }}>{c.notes}</p>}
+        {c.description && <p style={{ marginTop: 10 }}>{c.description}</p>}{c.notes && <p className="muted" style={{ marginTop: 6 }}>{c.notes}</p>}
       </div>
       <div className="kpis" style={{ marginTop: 14 }}>
         <Kpi v={decs.filter((d) => status(d) === "active").length} l="قرارات مستمرة" />
@@ -69,7 +69,7 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
             <tr key={d.id}>
               <td className="nowrap"><Link className="strong" href={`/decisions/${d.id}`}>{d.no}</Link><span className="cell-sub">{d.renewOfId ? "مجدد" : "جديد"}</span></td>
               <td>{fmtDate(d.issueDate)}<span className="cell-sub">{names.name(d.createdById)}</span></td>
-              <td>{d.lines.map((l) => <div key={l.id} className="cell-sub" style={{ color: "var(--text-2)" }}>{l.service.name} · {money(l.amount)} ج · {fmtMonth(l.startMonth)} ← {fmtMonth(l.endMonth)}{l.extendedBy ? ` (مُدد ${l.extendedBy})` : ""}</div>)}</td>
+              <td>{d.lines.map((l) => <div key={l.id} className="cell-sub" style={{ color: "var(--text-2)" }}>{l.service.name}{l.beneficiary ? ` (${l.beneficiary})` : ""}{l.category ? ` · ${l.category}` : ""} · {money(l.amount)} ج · {fmtMonth(l.startMonth)} ← {fmtMonth(l.endMonth)}{l.extendedBy ? ` (مُدد ${l.extendedBy})` : ""}</div>)}{d.needsDonation && <Badge tone="warn">تحتاج لتبرع</Badge>}</td>
               <td><Badge tone={status(d) === "active" ? "ok" : status(d) === "ended" ? "" : "bad"}>{DEC_STATUS_LABELS[status(d)]}</Badge>{d.stopReason && <span className="cell-sub">{d.stopReason}</span>}</td>
               <td>{d.renewalStatus !== "none" ? <Badge tone="info">{RENEWAL_LABELS[d.renewalStatus]}</Badge> : "—"}</td>
               <td>{can(u.role, "decision") && <Link className="btn secondary small" href={`/decisions/new?renew=${d.id}`}>تجديد</Link>}</td>
@@ -84,7 +84,7 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
           {ents.map((e) => (
             <tr key={e.id}>
               <td><Link className="strong" href={`/cycle/${e.id}`}>{fmtMonth(e.month)}</Link></td>
-              <td>{e.serviceName}</td><td>{money(e.amountN)}</td>
+              <td>{e.serviceName}{e.line.beneficiary && <span className="cell-sub">المستفيد: {e.line.beneficiary}</span>}</td><td>{money(e.amountN)}</td>
               <td><StageBadge stage={e.stage} kind={e.kind} /></td>
               <td>{e.transfer ? <>{e.transfer.method}<span className="cell-sub num">{e.transfer.ref}</span></> : e.legacySent ? "محوّل (نظام سابق)" : "—"}</td>
               <td>{e.refundTotal ? money(e.refundTotal) : "—"}</td><td>{money(e.received)}</td>

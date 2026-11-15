@@ -30,7 +30,7 @@ export async function createDecision(_p: State, f: FormData): Promise<State> {
     if (!existing && !name) fail("الكود جديد: اكتب اسم الحالة لتسجيلها.");
 
     const svcIds = f.getAll("svc").map(String), amounts = f.getAll("amount").map(String), monthsA = f.getAll("months").map(String);
-    const starts = f.getAll("start").map(String), ends = f.getAll("end").map(String), notes = f.getAll("note").map(String);
+    const starts = f.getAll("start").map(String), ends = f.getAll("end").map(String), notes = f.getAll("note").map(String), bens = f.getAll("beneficiary").map((v) => String(v).trim());
     if (!svcIds.length) fail("أضف خدمة واحدة على الأقل.");
     const services = await prisma.service.findMany({ where: { id: { in: svcIds } } });
     const lines = svcIds.map((sid, i) => {
@@ -45,16 +45,16 @@ export async function createDecision(_p: State, f: FormData): Promise<State> {
       const span = spanMonths(start, end);
       const note = (notes[i] ?? "").trim();
       if (span !== months && !note) fail(`الخدمة ${n}: المدة المكتوبة ${months} شهر والمحسوبة من التواريخ ${span}. اكتب ملاحظة توضح السبب.`);
-      return { svc, amount, months, start, end, note };
+      return { svc, amount, months, start, end, note, beneficiary: bens[i] ?? "" };
     });
-    lines.forEach((a, i) => lines.forEach((b, j) => { if (j < i && a.svc.id === b.svc.id && !(a.end < b.start || a.start > b.end)) fail(`الخدمة ${i + 1} مكررة في نفس القرار.`); }));
+    lines.forEach((a, i) => lines.forEach((b, j) => { if (j < i && a.svc.id === b.svc.id && a.beneficiary === b.beneficiary && !(a.end < b.start || a.start > b.end)) fail(`الخدمة ${i + 1} مكررة لنفس المستفيد في نفس القرار.`); }));
 
     // التعارض مع قرار ساري لنفس الخدمة
     const running = await prisma.decisionLine.findMany({ where: { caseCode: code, decision: { status: "active" }, serviceId: { in: lines.map((l) => l.svc.id) } }, include: { decision: true } });
     for (const [i, l] of lines.entries()) {
-      const hit = running.find((x) => x.serviceId === l.svc.id && !(l.end < x.startMonth || l.start > x.endMonth));
+      const hit = running.find((x) => x.serviceId === l.svc.id && x.beneficiary === l.beneficiary && !(l.end < x.startMonth || l.start > x.endMonth));
       if (hit && !(override && can(u.role, "decision.override"))) {
-        fail(`الخدمة ${i + 1}: «${l.svc.name}» سارية للحالة في قرار ${hit.decision.no} (${fmtMonth(hit.startMonth)} ← ${fmtMonth(hit.endMonth)}). أوقف القرار القديم أولاً أو اطلب مراجعة المشرف.`);
+        fail(`الخدمة ${i + 1}: «${l.svc.name}»${l.beneficiary ? ` لـ${l.beneficiary}` : ""} سارية للحالة في قرار ${hit.decision.no} (${fmtMonth(hit.startMonth)} ← ${fmtMonth(hit.endMonth)}). أوقف القرار القديم أولاً أو اطلب مراجعة المشرف.`);
       }
     }
     let no = str(f, "no");
@@ -68,7 +68,7 @@ export async function createDecision(_p: State, f: FormData): Promise<State> {
       }
       const d = await tx.decision.create({
         data: { no, caseCode: code, issueDate: issue!, donor: str(f, "donor"), text: str(f, "text"), overrideNote: override, renewOfId: renewOf || null, createdById: u.id,
-          lines: { create: lines.map((l) => ({ caseCode: code, serviceId: l.svc.id, amount: l.amount, months: l.months, startMonth: l.start, endMonth: l.end, mismatchNote: l.note })) } },
+          lines: { create: lines.map((l) => ({ caseCode: code, serviceId: l.svc.id, amount: l.amount, months: l.months, startMonth: l.start, endMonth: l.end, mismatchNote: l.note, beneficiary: l.beneficiary })) } },
       });
       if (renewOf) await tx.decision.update({ where: { id: renewOf }, data: { renewalStatus: "renewed", renewalAt: new Date(), renewalById: u.id, renewalNote: `قرار التجديد ${no}` } });
       await logOp(tx, u.id, AUTO_OPS.decision, { caseCode: code, result: `${no} · ${lines.map((l) => l.svc.name).join("، ")}`, ref: d.id });

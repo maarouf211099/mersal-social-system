@@ -21,20 +21,24 @@ export default async function RenewalPage({ searchParams }: { searchParams: SP }
   const m = monthOf(sp), view = one(sp.view) || "soon";
   const st = await getSettings();
   const cm = currentMonth();
-  const [decs, names] = await Promise.all([
-    prisma.decision.findMany({ where: { status: "active" }, include: { case: true, lines: { include: { service: true } } } }),
+  // نحسب القوائم من آخر شهر لكل قرار (استعلام مجمّع)، ونحمّل التفاصيل للقائمة المفتوحة بس
+  const [ends, sentIds, names, noReplyIds] = await Promise.all([
+    prisma.decisionLine.groupBy({ by: ["decisionId"], where: { decision: { status: "active" } }, _max: { endMonth: true } }),
+    prisma.decision.findMany({ where: { status: "active", renewalStatus: "sent" }, select: { id: true } }),
     userNames(),
+    noReplyDecisionIds(), // عدم الرد لشهرين متتاليين: آخر نتيجتين متابعة لنفس الخدمة «لم يتم الرد»
   ]);
-  const withEnd = decs.map((d) => ({ ...d, end: d.lines.reduce((x, l) => (l.endMonth > x ? l.endMonth : x), "") })).filter((d) => d.end);
-  // عدم الرد لشهرين متتاليين: آخر نتيجتين متابعة لنفس الخدمة «لم يتم الرد» (من النظام السابق)
-  const noReplyIds = await noReplyDecisionIds();
-  const lists = {
-    soon: withEnd.filter((d) => d.end >= m && d.end <= addMonths(m, st.renewLead) && d.end >= cm),
-    sent: withEnd.filter((d) => d.renewalStatus === "sent"),
-    ended: withEnd.filter((d) => d.end < cm),
-    noreply: withEnd.filter((d) => noReplyIds.has(d.id)),
+  const endOf = new Map(ends.map((g) => [g.decisionId, g._max.endMonth ?? ""]));
+  const ids = {
+    soon: ends.filter((g) => { const e = g._max.endMonth ?? ""; return e >= m && e >= cm && e <= addMonths(m, st.renewLead); }).map((g) => g.decisionId),
+    sent: sentIds.map((d) => d.id).filter((id) => endOf.has(id)),
+    ended: ends.filter((g) => (g._max.endMonth ?? "") < cm).map((g) => g.decisionId),
+    noreply: [...noReplyIds].filter((id) => endOf.has(id)),
   };
-  const list = (lists[view as keyof typeof lists] ?? lists.soon).sort((a, b) => a.end.localeCompare(b.end));
+  const lists = { soon: ids.soon, sent: ids.sent, ended: ids.ended, noreply: ids.noreply };
+  const viewIds = (ids[view as keyof typeof ids] ?? ids.soon).slice(0, 1500);
+  const list = (await prisma.decision.findMany({ where: { id: { in: viewIds } }, include: { case: true, lines: { include: { service: true } } } }))
+    .map((d) => ({ ...d, end: endOf.get(d.id) ?? "" })).sort((a, b) => a.end.localeCompare(b.end));
   const hint = {
     soon: `قرارات مستمرة آخر شهر فيها خلال ${st.renewLead} شهر من ${fmtMonth(m)}. أرسلها للتجديد أو إعادة البحث قبل انتهائها.`,
     sent: "قرارات أُرسلت للتجديد ولم يُسجل لها قرار جديد بعد.",
@@ -79,7 +83,7 @@ export default async function RenewalPage({ searchParams }: { searchParams: SP }
                   <td>{d.no}</td>
                   <td><CaseLink code={d.caseCode} name={d.case.name} /></td>
                   <td><span className="num">{d.case.phone || "—"}</span><span className="cell-sub">{d.case.governorate}</span></td>
-                  <td>{d.lines.map((l) => <span key={l.id} className="cell-sub" style={{ color: "var(--text-2)" }}>{l.service.name} · {money(l.amount)} ج · حتى {fmtMonth(l.endMonth)}</span>)}</td>
+                  <td>{d.lines.map((l) => <span key={l.id} className="cell-sub" style={{ color: "var(--text-2)" }}>{l.service.name}{l.beneficiary ? ` (${l.beneficiary})` : ""} · {money(l.amount)} ج · حتى {fmtMonth(l.endMonth)}</span>)}</td>
                   <td className="nowrap">{fmtMonth(d.end)}{view !== "ended" && view !== "noreply" && <span className="cell-sub"><Badge tone={left <= 1 ? "bad" : "warn"}>متبقي {left} شهر</Badge></span>}</td>
                   <td>{d.renewalStatus !== "none" ? <><Badge tone="info">{RENEWAL_LABELS[d.renewalStatus]}</Badge><span className="cell-sub">{fmtTs(d.renewalAt)} · {names.name(d.renewalById)}</span></> : <span className="muted">لم يُرسل</span>}</td>
                   <td className="nowrap">{view !== "ended" && can(u.role, "decision") && <Link className="btn secondary small" href={`/decisions/new?renew=${d.id}`}>تسجيل قرار التجديد</Link>}</td>

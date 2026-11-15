@@ -18,13 +18,14 @@ import { Icon } from "@/components/icons";
 export default async function DecisionsPage({ searchParams }: { searchParams: SP }) {
   const u = await requirePageUser();
   const sp = await searchParams;
-  const q = one(sp.q).trim(), status = one(sp.status), svc = one(sp.svc);
+  const q = one(sp.q).trim(), status = one(sp.status), svc = one(sp.svc), donation = one(sp.donation);
   const cm = currentMonth();
   const st = await getSettings();
   const where: Prisma.DecisionWhereInput = {
     ...(q ? { OR: [{ caseCode: { contains: q } }, { no: { contains: q } }, { case: { name: { contains: q, mode: "insensitive" } } }] } : {}),
     ...(status === "ended" ? { OR: [{ status: "ended" }, { status: "active", lines: { every: { endMonth: { lt: cm } } } }] } : status === "active" ? { status: "active", lines: { some: { endMonth: { gte: cm } } } } : status ? { status: status as any } : {}),
     ...(svc ? { lines: { some: { serviceId: svc } } } : {}),
+    ...(donation === "1" ? { needsDonation: true } : {}),
   };
   const [rows, services, names] = await Promise.all([
     prisma.decision.findMany({ where, take: 300, orderBy: { issueDate: "desc" }, include: { case: { select: { name: true } }, lines: { include: { service: true } } } }),
@@ -40,6 +41,7 @@ export default async function DecisionsPage({ searchParams }: { searchParams: SP
         <label className="field grow"><span>بحث</span><input type="search" name="q" defaultValue={q} placeholder="كود، اسم، رقم قرار" /></label>
         <label className="field"><span>حالة القرار</span><AutoSubmitSelect name="status" defaultValue={status}><option value="">الكل</option>{Object.entries(DEC_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</AutoSubmitSelect></label>
         <label className="field"><span>الخدمة</span><AutoSubmitSelect name="svc" defaultValue={svc}><option value="">الكل</option>{services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</AutoSubmitSelect></label>
+        <label className="field"><span>التمويل</span><AutoSubmitSelect name="donation" defaultValue={donation}><option value="">الكل</option><option value="1">تحتاج لتبرع</option></AutoSubmitSelect></label>
         <button className="btn secondary auto">بحث</button>
       </form>
       <div className="card">
@@ -53,9 +55,9 @@ export default async function DecisionsPage({ searchParams }: { searchParams: SP
                 <td className="nowrap"><Link className="strong" href={`/decisions/${d.id}`}>{d.no}</Link><span className="cell-sub">{d.renewOfId ? "مجدد" : "جديد"}</span></td>
                 <td><CaseLink code={d.caseCode} name={d.case.name} /></td>
                 <td className="nowrap">{fmtDate(d.issueDate)}<span className="cell-sub">{names.name(d.createdById)}</span></td>
-                <td>{d.lines.map((l) => <span key={l.id} className="cell-sub" style={{ color: "var(--text-2)" }}>{l.service.name} · {money(l.amount)} ج · {fmtMonth(l.startMonth)} ← {fmtMonth(l.endMonth)}</span>)}</td>
+                <td>{d.lines.map((l) => <span key={l.id} className="cell-sub" style={{ color: "var(--text-2)" }}>{l.service.name}{l.beneficiary ? ` (${l.beneficiary})` : ""} · {money(l.amount)} ج · {fmtMonth(l.startMonth)} ← {fmtMonth(l.endMonth)}</span>)}</td>
                 <td className="nowrap">{fmtMonth(end)}{eff === "active" && left > 0 && end <= addMonths(cm, st.renewLead) && <span className="cell-sub"><Badge tone="warn">متبقي {left} شهر</Badge></span>}</td>
-                <td><Badge tone={eff === "active" ? "ok" : eff === "ended" ? "" : "bad"}>{DEC_STATUS_LABELS[eff]}</Badge>{d.stopReason && <span className="cell-sub">{d.stopReason}</span>}{d.renewalStatus !== "none" && <span className="cell-sub">{RENEWAL_LABELS[d.renewalStatus]}</span>}</td>
+                <td><Badge tone={eff === "active" ? "ok" : eff === "ended" ? "" : "bad"}>{DEC_STATUS_LABELS[eff]}</Badge>{d.stopReason && <span className="cell-sub">{d.stopReason}</span>}{d.renewalStatus !== "none" && <span className="cell-sub">{RENEWAL_LABELS[d.renewalStatus]}</span>}{d.needsDonation && <span className="cell-sub"><Badge tone="warn">تحتاج لتبرع</Badge></span>}</td>
                 <td className="nowrap">
                   {can(u.role, "decision") && <Link className="btn secondary small" href={`/decisions/new?renew=${d.id}`}>تجديد</Link>}{" "}
                   {d.status === "active" && can(u.role, "decision.stop") && (

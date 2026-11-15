@@ -45,7 +45,9 @@ export async function loadEnts(where: Prisma.EntitlementWhereInput, followDays: 
   const prevKeys = rows.filter((r) => !r.sentAt && !r.holdApprovedAt).map((r) => ({ lineId: r.lineId, month: addMonths(r.month, -1) }));
   const prevMap = new Map<string, boolean>();
   if (prevKeys.length) {
-    const prev = await prisma.entitlement.findMany({ where: { OR: prevKeys }, include: ENT_INCLUDE });
+    const byMonth = new Map<string, string[]>();
+    prevKeys.forEach((k) => byMonth.set(k.month, [...(byMonth.get(k.month) ?? []), k.lineId]));
+    const prev = await prisma.entitlement.findMany({ where: { OR: [...byMonth].map(([month, ids]) => ({ month, lineId: { in: ids } })) }, include: ENT_INCLUDE });
     for (const p of prev) {
       const pe = enrich(p, null, followDays);
       prevMap.set(`${p.lineId}|${p.month}`, isResolved(pe.stage, pe.settled));

@@ -45,7 +45,7 @@ export default async function FollowPage({ searchParams }: { searchParams: SP })
             return (
               <tr key={e.id}>
                 <td><CaseLink code={e.caseCode} name={e.case.name} /><span className="cell-sub num">{e.case.phone}</span></td>
-                <td>{e.serviceName}<span className="cell-sub">{money(e.transferred || e.amountN)} ج{e.transfer ? ` · ${fmtDate(e.transfer.date)}` : ""}</span></td>
+                <td>{e.serviceName}{e.line.beneficiary && <span className="cell-sub">المستفيد: {e.line.beneficiary}</span>}<span className="cell-sub">{money(e.transferred || e.amountN)} ج{e.transfer ? ` · ${fmtDate(e.transfer.date)}` : ""}</span></td>
                 <td className="nowrap"><b style={{ color: e.followDone ? "var(--ok)" : "var(--bad)" }}>{e.attempts.length}/3</b>{last && <span className="cell-sub">{fmtTs(last.createdAt)} · {names.name(last.userId)}</span>}</td>
                 <td><StageBadge stage={e.stage} kind={e.kind} />{e.notPaidReason && <span className="cell-sub">{e.notPaidReason}</span>}</td>
                 <td>
