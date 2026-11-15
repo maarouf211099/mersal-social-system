@@ -51,7 +51,8 @@ jobs:
       group: deploy-mersal-social
       cancel-in-progress: false
     env:
-      DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+      # من متغير DEPLOY_DIR في GitHub (Settings ← Secrets and variables ← Actions ← Variables)، أو الفولدر الافتراضي
+      DEPLOY_DIR: ${{ vars.DEPLOY_DIR || 'D:\apis\mersal-social' }}
       NEXT_TELEMETRY_DISABLED: "1"
       # من غيره الـ runner بيقفل أي عملية اتفتحت أثناء الـ job لما يخلص ("Terminate orphan process")،
       # ومنها عملية النظام اللي pm2 لسه مشغّلها
