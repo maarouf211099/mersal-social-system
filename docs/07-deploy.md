@@ -31,6 +31,16 @@ node scripts/setup-server.mjs --dir D:\apis\mersal-social --admin-email mahmoud.
 cd mersal-social-system && git pull && set DEPLOY_DIR=D:\apis\mersal-social && node scripts/deploy.mjs
 ```
 
+## دومين و HTTPS (social.mersal-ngo.info)
+1. عند مزود الدومين `mersal-ngo.info`: سجل **A** باسم `social` ← `84.46.252.131`.
+2. على السيرفر (PowerShell كـ Administrator):
+   ```
+   cd D:\src\mersal-social-system && git pull
+   node scripts/setup-https.mjs --domain social.mersal-ngo.info --email EMAIL --dir D:\apis\mersal-social
+   ```
+   بيسطّب Caddy كخدمة، ويطلع شهادة Let's Encrypt ويجددها لوحده. لو بورت 80 أو 443 مستخدمين من برنامج تاني بيقف ويقول اسمه (مابيلمسش أي نظام).
+3. بعد التأكد إن `https://social.mersal-ngo.info` شغال: نفس الأمر ومعاه `--lock` — الكوكي يبقى HTTPS بس، والنظام مايتفتحش غير من الدومين، وبورت 3011 يتقفل من بره.
+
 ## الربط ببوابة مرسال (الدخول الموحد)
 النظام فيه المسارين اللي البوابة محتاجاهم (`/sso/callback` و `/api/portal/summary`) — شغالين بس لما `PORTAL_SSO_SECRET` يتحط.
 
