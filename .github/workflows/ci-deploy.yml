@@ -1,0 +1,62 @@
+name: CI & Deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: mersal_social
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:ci@localhost:5432/mersal_social?schema=social
+      AUTH_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma validate
+      # الـ migrations لازم تتطبق على داتابيز فاضية من غير مشاكل (ومعاها الـ triggers)
+      - run: npx prisma migrate deploy
+      # ومفيش تعديل في schema.prisma من غير migration
+      - run: npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: node --check scripts/setup-server.mjs && node --check scripts/deploy.mjs && node --check scripts/backup.mjs
+
+  deploy:
+    # النشر بس من main بعد ما الـ CI ينجح — عمره ما بيشتغل على pull request
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, mersal-social]
+    concurrency:
+      group: deploy-mersal-social
+      cancel-in-progress: false
+    env:
+      DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+      NEXT_TELEMETRY_DISABLED: "1"
+      # من غيره الـ runner بيقفل أي عملية اتفتحت أثناء الـ job لما يخلص ("Terminate orphan process")،
+      # ومنها عملية النظام اللي pm2 لسه مشغّلها
+      RUNNER_TRACKING_ID: ""
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: node scripts/deploy.mjs

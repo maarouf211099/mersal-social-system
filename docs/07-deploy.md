@@ -16,11 +16,20 @@ node scripts/setup-server.mjs --dir D:\apis\mersal-social --admin-email mahmoud.
 
 آمن يتشغل تاني: مابيكتبش فوق `.env` موجود، ومابيعملش مدير تاني، ومابيلمسش أي نظام تاني.
 
-## التحديث
+## التحديث التلقائي — GitHub Actions Self-hosted Runner
+مع كل push على `main`: GitHub بيعمل الفحوصات (migrations، الأنواع، الاختبارات، البناء) على سيرفر GitHub، ولو نجحت، الـ runner اللي على الـ VPS بيشغّل `scripts/deploy.mjs` (migrations ← بناء ← نسخة جديدة ← إعادة تشغيل `mersal-social` في pm2 ← فحص `/api/health` ← رجوع للنسخة السابقة لو فشل).
+
+إعداد مرة واحدة على الـ VPS:
+1. المستودع لازم يفضل **Private** — الـ runner بيشغّل الكود على السيرفر.
+2. GitHub ← المستودع ← Settings ← Actions ← Runners ← **New self-hosted runner** ← Windows x64، ونفّذ الأوامر اللي بتظهر في **فولدر جديد** (مثلاً `C:\actions-runner-social` — مش فولدر runner التذاكر).
+   عند `config.cmd`: الاسم `mersal-social-vps`، وأضف الوسم (label) **`mersal-social`**، ووافق على التشغيل كـ service **بنفس اليوزر اللي مشغّل pm2**.
+3. GitHub ← Settings ← Secrets and variables ← Actions ← **Variables** ← `DEPLOY_DIR` = `D:\apis\mersal-social`.
+4. GitHub ← Actions ← CI & Deploy ← **Run workflow** (أو أي push على main).
+
+التحديث اليدوي (لو الـ runner واقف):
 ```
 cd mersal-social-system && git pull && set DEPLOY_DIR=D:\apis\mersal-social && node scripts/deploy.mjs
 ```
-بيطبق الـ migrations الجديدة، يبني، ينشر في فولدر release جديد، ويتأكد من `/api/health`. لو النسخة الجديدة ماشتغلتش **بيرجع للنسخة السابقة لوحده**.
 
 ## الربط ببوابة مرسال (الدخول الموحد)
 النظام فيه المسارين اللي البوابة محتاجاهم (`/sso/callback` و `/api/portal/summary`) — شغالين بس لما `PORTAL_SSO_SECRET` يتحط.
