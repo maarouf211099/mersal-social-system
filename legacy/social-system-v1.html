@@ -1,0 +1,809 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>نظام الإدارة الاجتماعية</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one operations console. Header strip, tab bar, month bar, then a single working area.
+   Tables carry the work; color is reserved for state (red = follow-up open, green = done). */
+:root{
+  --bg:#f1f4f5; --surface:#ffffff; --surface2:#e8edef; --ink:#13262b; --muted:#566b71; --line:#d3dcdf;
+  --primary:#0e6670; --primary-ink:#ffffff; --primary-soft:#d9ebed;
+  --good:#1b7a4b; --good-bg:#dcf0e4; --bad:#b3342b; --bad-bg:#f8e0dd; --warn:#8f6206; --warn-bg:#f6ebcb; --info:#1d5f8a; --info-bg:#dceaf4;
+  --font-display:'Cairo','Segoe UI',Tahoma,sans-serif;
+  --font-body:'IBM Plex Sans Arabic','Segoe UI',Tahoma,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1a1d; --surface:#15252a; --surface2:#1c3036; --ink:#e5eef0; --muted:#93a9af; --line:#2a4047;
+  --primary:#52b6c0; --primary-ink:#06262a; --primary-soft:#17353b;
+  --good:#63d193; --good-bg:#17382a; --bad:#ff8f85; --bad-bg:#3e1e1b; --warn:#e6bb52; --warn-bg:#3a2f10; --info:#7fbbe4; --info-bg:#16303f;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1a1d; --surface:#15252a; --surface2:#1c3036; --ink:#e5eef0; --muted:#93a9af; --line:#2a4047;
+  --primary:#52b6c0; --primary-ink:#06262a; --primary-soft:#17353b;
+  --good:#63d193; --good-bg:#17382a; --bad:#ff8f85; --bad-bg:#3e1e1b; --warn:#e6bb52; --warn-bg:#3a2f10; --info:#7fbbe4; --info-bg:#16303f;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#app{max-width:1280px;margin:0 auto;padding-block:16px 48px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+.hdr{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;padding-bottom:14px}
+.hdr h1{font-size:22px;line-height:1.3}
+.hdr .sub{color:var(--muted);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{display:inline-flex;gap:6px;align-items:center;padding:4px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:13px}
+.chip.ok{background:var(--good-bg);border-color:transparent;color:var(--good)}
+.chip.no{background:var(--bad-bg);border-color:transparent;color:var(--bad)}
+.chip.demo{background:var(--warn-bg);border-color:transparent;color:var(--warn)}
+.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);padding-bottom:0;scrollbar-width:thin}
+.tabs button{flex:none;background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;cursor:pointer;color:var(--muted);font-weight:500;border-radius:6px 6px 0 0}
+.tabs button:hover{color:var(--ink);background:var(--surface2)}
+.tabs button[aria-selected="true"]{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 0}
+.bar label,.fld label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.bar .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.grow{flex:1}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:38px;max-width:100%}
+textarea{min-height:70px;width:100%;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;min-height:38px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.good{background:var(--good-bg);color:var(--good);border-color:transparent}
+.btn.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.btn.sm{min-height:30px;padding:3px 10px;font-size:13px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.ro .w{display:none!important}
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12.5px;color:var(--muted);font-weight:600;background:var(--surface2);position:sticky;top:0;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:color-mix(in srgb,var(--primary-soft) 45%,transparent)}
+.num{direction:ltr;unicode-bidi:embed;display:inline-block;font-variant-numeric:tabular-nums}
+td.n,th.n{font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap;background:var(--surface2);color:var(--muted)}
+.pill.good{background:var(--good-bg);color:var(--good)} .pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.info{background:var(--info-bg);color:var(--info)}
+.pill.pri{background:var(--primary-soft);color:var(--primary)}
+.muted{color:var(--muted)} .small{font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-family:var(--font-display);font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:var(--muted)}
+.kpi.bad{border-color:var(--bad)} .kpi.bad b{color:var(--bad)}
+.kpi.good b{color:var(--good)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card h3{font-size:16px;margin-bottom:10px}
+.empty{padding:28px 16px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:10px}
+.empty b{display:block;color:var(--ink);font-family:var(--font-display);font-size:17px;margin-bottom:4px}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bars .b{display:grid;grid-template-columns:110px 1fr 52px;gap:8px;align-items:center;font-size:13px}
+.bars .t{height:10px;border-radius:5px;background:var(--surface2);overflow:hidden}
+.bars .t i{display:block;height:100%;background:var(--primary);border-radius:5px}
+.fu{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-variant-numeric:tabular-nums}
+.fu::before{content:"";width:10px;height:10px;border-radius:50%;background:currentColor}
+.fu.open{color:var(--bad)} .fu.done{color:var(--good)}
+.modal[hidden]{display:none!important}
+.modal{position:fixed;inset:0;background:rgba(8,20,24,.55);display:flex;justify-content:center;align-items:flex-start;padding:max(16px,env(safe-area-inset-top,0px)) 12px 16px;overflow-y:auto;z-index:50}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:12px;width:min(880px,100%);padding:18px 20px;margin-block:auto}
+.sheet h2{font-size:19px;margin-bottom:12px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.fgrid label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.fgrid input,.fgrid select{width:100%}
+.lrow{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--surface2)}
+.lrow .warnline{color:var(--bad);font-size:13px;margin-top:8px;font-weight:500}
+.lrow .okline{color:var(--muted);font-size:13px;margin-top:8px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;justify-content:flex-start}
+.tl{list-style:none;margin:0;padding:0;border-inline-start:2px solid var(--line)}
+.tl li{padding:4px 14px;position:relative;font-size:14px}
+.tl li::before{content:"";position:absolute;inset-inline-start:-6px;top:11px;width:10px;height:10px;border-radius:50%;background:var(--primary)}
+.tl .d{color:var(--muted);font-size:12.5px;margin-inline-end:8px}
+.toast{position:fixed;inset-inline:0;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;pointer-events:none;z-index:80}
+.toast div{background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;max-width:min(560px,92vw);font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.notice{background:var(--warn-bg);color:var(--warn);padding:10px 14px;border-radius:10px;margin-bottom:12px;font-size:14px}
+.note{background:var(--info-bg);color:var(--info);padding:10px 14px;border-radius:10px;font-size:14px}
+ol.steps{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+@media (max-width:640px){.hdr h1{font-size:19px}.bars .b{grid-template-columns:90px 1fr 44px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app" dir="rtl" lang="ar">
+  <header class="hdr">
+    <div>
+      <h1>نظام الإدارة الاجتماعية</h1>
+      <div class="sub">مؤسسة مرسال الطبية الخيرية · دورة الحالة من التسجيل حتى القرار والصرف والمتابعة</div>
+    </div>
+    <div class="chips">
+      <span class="chip demo">نسخة تجريبية · بيانات وهمية</span>
+      <span class="chip" id="meChip">جارٍ التحميل…</span>
+      <span class="chip" id="permChip" hidden></span>
+    </div>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div class="bar" id="monthBar">
+    <label>الشهر<select id="monthSel" aria-label="الشهر"></select></label>
+    <span class="muted small" id="monthHint"></span>
+  </div>
+  <div id="loadNote"></div>
+  <main id="main"></main>
+</div>
+<div id="modal" class="modal" hidden></div>
+<div class="toast" id="toast" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- reference data (confirm with the team) ---------- */
+const SERVICES=[
+  {name:'كفالة شهرية',kind:'مالي',cycle:'شهري'},
+  {name:'بدل حفاضات',kind:'مالي',cycle:'شهري'},
+  {name:'كارت كازيون (الكارت الغذائي)',kind:'كارت',cycle:'شهري'},
+  {name:'مساعدة عينية',kind:'عيني',cycle:'مرة واحدة'},
+  {name:'أثاث',kind:'عيني',cycle:'مرة واحدة'},
+  {name:'مساعدات غذائية',kind:'عيني',cycle:'مرة واحدة'},
+  {name:'التكفل بالعلاج الدوائي والفحوصات',kind:'تغطية',cycle:'تغطية طوال المدة'}
+];
+const TEAMS=['ملف الحفاضات','ملف العيني','ملف المالي','ملف التواصل','عام'];
+const TASKS=[
+ ['سحب القرارات الإدارية وتسكينها','ملف الحفاضات',1,'حالة'],
+ ['التنسيق مع فريق التواصل لتوزيع مهام إبلاغ الحالات بالقرارات','ملف الحفاضات',2,'عامة'],
+ ['متابعة دورية لشيت القرارات','ملف الحفاضات',1,'حالة'],
+ ['استلام حالات تحتاج الي خدمة حفاضات من المتابعة','ملف الحفاضات',1,'حالة'],
+ ['تسجيل الحالات المنتهي قراراتها في شيت اعادة بحث او مناقشة','ملف الحفاضات',1,'حالة'],
+ ['تنسيق مع إدارة PR','ملف العيني',2,'عامة'],
+ ['استلام تحويلات اودو','ملف العيني',1,'عامة'],
+ ['متابعة طلبات صرف','ملف العيني',2,'عامة'],
+ ['متابعة طلبات شراء','ملف العيني',2,'عامة'],
+ ['تجهيز حالات شراء','ملف العيني',1,'حالة'],
+ ['عمل طلب شراء','ملف العيني',1,'حالة'],
+ ['تجهيز طلب تشغيل','ملف العيني',1,'حالة'],
+ ['عمل طلب صرف','ملف العيني',1,'حالة'],
+ ['تنسيق مع ادارة الحركة عينية','ملف العيني',1,'عامة'],
+ ['تنسيق مع ادارة المشتريات','ملف العيني',1,'عامة'],
+ ['تسليم كروت كازيون','ملف العيني',0.2,'حالة'],
+ ['تسليم اثاث','ملف العيني',1,'حالة'],
+ ['تسليم مساعدات غذائية','ملف العيني',1,'حالة'],
+ ['مراجعة تسليمات كروت وتوثيقها بالشيت','ملف العيني',0.2,'حالة'],
+ ['مراجعة تسليمات اثاث وتوثيقها بالشيت','ملف العيني',1,'حالة'],
+ ['مراجعة تسليمات مساعدات غذائية وتوثيقها بالشيت','ملف العيني',0.2,'حالة'],
+ ['مراجعة استردادات كروت','ملف العيني',1,'حالة'],
+ ['تنسيق مع ادارة المخزن','ملف العيني',1,'عامة'],
+ ['تسليم مساعدة عينية','ملف العيني',1,'حالة'],
+ ['مراجعة تسليمات مساعدات عينية وتوثيقها بالشيت','ملف العيني',0.2,'حالة'],
+ ['متابعة جروب التبرعات','ملف العيني',1,'عامة'],
+ ['طباعة ايصالات اودو','ملف العيني',2,'عامة'],
+ ['اضافة اسعار منتجات عينية بالشيت','ملف العيني',1,'عامة'],
+ ['استلام تبرع عيني من الحركة وادراجه للادارة','ملف العيني',1,'عامة'],
+ ['استلام طلب شراء من الحركة وادراجه للادارة','ملف العيني',1,'عامة'],
+ ['مراجعة دورية لشيت الكروت الغذائية','ملف العيني',0.1,'عامة'],
+ ['مراجعة حالات المالي','ملف المالي',0.2,'حالة'],
+ ['تسليم مساعدات مالية','ملف المالي',0.2,'حالة'],
+ ['تنفيذ قرار مالي طارئ','ملف المالي',2,'حالة'],
+ ['التنسيق مع ادارة الحسابات','ملف المالي',2,'عامة'],
+ ['تجهيز ايصالات المندوب','ملف المالي',1,'عامة'],
+ ['تجهيز طلب تشغيل بحالات المندوب','ملف المالي',1,'عامة'],
+ ['مراجعة استردادات مالية','ملف المالي',2,'عامة'],
+ ['تنسيق مع ادارة الحركة مالية','ملف المالي',2,'عامة'],
+ ['عمل اذن صرف','ملف المالي',1,'عامة'],
+ ['مراجعة قبل ارسال طلب التشغيل','عام',2,'عامة'],
+ ['مراجعة قبل انشاء طلب الشراء','عام',2,'عامة'],
+ ['تجهيز الشيت الشهري للمتابعات الشهرية','عام',2,'عامة'],
+ ['مكالمات معرض الملابس','ملف التواصل',1,'حالة'],
+ ['ارسال الحالة للمناقشة او البحث لخدمة جديدة','ملف التواصل',1,'حالة'],
+ ['استلام والرد علي استفسارات السيكوانس','ملف التواصل',1,'حالة'],
+ ['مكالمة متابعة صرف','ملف التواصل',1,'حالة'],
+ ['مكالمة تاكيد بيانات','ملف التواصل',2,'حالة'],
+ ['مكالمة متابعة استرداد','ملف التواصل',2,'حالة'],
+ ['استقبال حالة استفسار + تسليم فوط صحية','ملف التواصل',2,'حالة'],
+ ['استقبال حالة استفسار','ملف التواصل',2,'حالة'],
+ ['استقبال حالة استلام فوط','ملف التواصل',2,'حالة'],
+ ['تعليقات سيستم','ملف التواصل',0.5,'حالة'],
+ ['اضافة وتجهيز تعليقات','ملف التواصل',5,'عامة'],
+ ['رد علي ايميل','ملف التواصل',1,'حالة'],
+ ['ارسال ايميل','ملف التواصل',1,'حالة'],
+ ['الرد على الشكاوى عبر نظام أودو','ملف التواصل',2,'حالة'],
+ ['رد علي ايميل + مكالمة','ملف التواصل',2,'حالة'],
+ ['تسجيل بفورم المتابعة','ملف التواصل',1,'عامة'],
+ ['تسجيل بفورم غلق','ملف التواصل',1,'حالة'],
+ ['استلام بيانات الحالات','ملف التواصل',0.5,'عامة'],
+ ['مكالمات متابعة خدمة اثاث','ملف التواصل',1,'حالة'],
+ ['ارسال رسائل نصية للحالات','ملف التواصل',0.2,'حالة'],
+ ['التواصل مع ادارة it','ملف التواصل',2,'عامة'],
+ ['التواصل مع ادارة اللجنة','ملف التواصل',2,'عامة'],
+ ['تقارير','ملف التواصل',2,'عامة'],
+ ['تسليمات معرض الملابس','ملف التواصل',1,'حالة'],
+ ['التواصل مع الجودة','ملف التواصل',2,'عامة'],
+ ['التواصل مع ادارة المتابعة','ملف التواصل',2,'عامة'],
+ ['التنسيق مع الفروع للتسليمات','ملف التواصل',2,'عامة'],
+ ['مكالمات استلام الكاش المعادي','ملف التواصل',1,'حالة']
+].map(t=>({name:t[0],team:t[1],weight:t[2],scope:t[3]}));
+const NATS=['مصري','سوداني','سوري','يمني','إريتري','جنوب سوداني','أخرى'];
+const MN=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const BULK={
+  'مالي':[{act:'send',label:'تم إرسال الكفالة'}],
+  'كارت':[{act:'send',label:'تم إرسال الكارت'},{act:'resend',label:'تمت إعادة إرسال الكارت'}],
+  'عيني':[{act:'send',label:'تم التسليم'}]
+};
+
+/* ---------- small helpers ---------- */
+const $=(s,r)=>(r||document).querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const fmtMonth=m=>{if(!m)return'—';const p=m.split('-');return MN[+p[1]-1]+' '+p[0]};
+const toIdx=m=>{const p=m.split('-').map(Number);return p[0]*12+p[1]-1};
+const fromIdx=i=>Math.floor(i/12)+'-'+pad(i%12+1);
+const addMonths=(m,n)=>fromIdx(toIdx(m)+n);
+const spanMonths=(s,e)=>toIdx(e)-toIdx(s)+1;
+const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const fmtDate=iso=>{if(!iso)return'—';const p=iso.split('-');return(+p[2])+'/'+(+p[1])+'/'+p[0]};
+const fmtTs=ts=>{if(!ts)return'—';const d=new Date(ts);return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes())};
+const money=n=>Number(n||0).toLocaleString('en-US');
+const curMonth=todayISO().slice(0,7);
+/* decisions dated 19th..18th start on the 1st of the month after the cut-off month */
+function suggestStart(iso){
+  if(!iso)return'';
+  const p=iso.split('-').map(Number);
+  return addMonths(p[0]+'-'+pad(p[1]),p[2]<=18?1:2);
+}
+function monthOpts(val){
+  let o='';let found=false;
+  for(let i=toIdx('2025-01');i<=toIdx('2029-12');i++){const m=fromIdx(i);if(m===val)found=true;o+='<option value="'+m+'"'+(m===val?' selected':'')+'>'+fmtMonth(m)+'</option>'}
+  if(val&&!found)o+='<option value="'+val+'" selected>'+fmtMonth(val)+'</option>';
+  return o;
+}
+const svc=n=>SERVICES.find(s=>s.name===n)||{name:n,kind:'مالي',cycle:'شهري'};
+
+/* ---------- state ---------- */
+const S={cases:{},decisions:{},lines:{},ents:{},ops:{},audit:{}};
+const loaded={};
+const F={casesQ:'',decStatus:'',decQ:'',entKind:'مالي',entQ:'',entStatus:'',fuView:'open',fuQ:'',opTeam:'',opStatus:'',opQ:'',opMonth:'all'};
+let tab='dash',month=curMonth,shellTab=null,db=null,user=null,me={id:'anon',name:''},canWrite=null;
+const SEL=new Set();const names={};const askedNames=new Set();
+let D={};
+
+const TABS=[['dash','لوحة المتابعة'],['cases','الحالات'],['decisions','القرارات'],['monthly','الاستحقاق الشهري'],['follow','المتابعة'],['close','إغلاق الشهر'],['ops','العمليات'],['audit','سجل التدقيق']];
+
+/* ---------- derived data ---------- */
+function derive(){
+  const arr=o=>Object.values(o);
+  D.cases=arr(S.cases);D.decs=arr(S.decisions);D.lines=arr(S.lines);D.ents=arr(S.ents);D.ops=arr(S.ops);
+  D.audit=arr(S.audit).sort((a,b)=>b.ts-a.ts);
+  D.decByCode={};D.linesByDec={};
+  D.decs.forEach(d=>{(D.decByCode[d.code]=D.decByCode[d.code]||[]).push(d)});
+  D.lines.forEach(l=>{(D.linesByDec[l.decId]=D.linesByDec[l.decId]||[]).push(l)});
+}
+function decKind(d){
+  const sib=(D.decByCode[d.code]||[]).slice().sort((a,b)=>(a.issueDate||'').localeCompare(b.issueDate||'')||(a.createdAt||0)-(b.createdAt||0));
+  return sib.length&&sib[0].id===d.id?'جديد':'مجدد';
+}
+function decEnd(d){return(D.linesByDec[d.id]||[]).reduce((m,l)=>l.endMonth>m?l.endMonth:m,'')}
+function decStart(d){return(D.linesByDec[d.id]||[]).reduce((m,l)=>(!m||l.startMonth<m)?l.startMonth:m,'')}
+function entStatus(e){
+  if(e.deferred)return'مؤجل';
+  if(e.followResult)return e.followResult;
+  if(e.sent)return e.resentCount?'تمت إعادة الإرسال':'تم الإرسال';
+  return'مستحق';
+}
+const statusClass={'مستحق':'','تم الإرسال':'info','تمت إعادة الإرسال':'warn','تم الصرف':'good','لم يتم الصرف':'bad','مؤجل':'warn'};
+function followDone(e){const a=e.attempts||[];return a.some(x=>x.answered)||a.length>=3}
+function nameOf(id){if(!id)return'—';if(id===me.id)return me.name||'أنا';return names[id]||'مستخدم'}
+function entsOf(m){return D.ents.filter(e=>e.month===m)}
+function caseName(c){return S.cases[c]?S.cases[c].name:'(كود غير مسجل)'}
+function overlap(code,service,start,end,ignoreDec){
+  for(const d of(D.decByCode[code]||[])){
+    if(d.status!=='مستمر'||d.id===ignoreDec)continue;
+    for(const l of(D.linesByDec[d.id]||[])){
+      if(l.service===service&&!(end<l.startMonth||start>l.endMonth))return{dec:d,line:l};
+    }
+  }
+  return null;
+}
+function closeLists(){
+  const ended=[],noReply=[],seen=new Set();
+  D.decs.forEach(d=>{if(d.status==='مستمر'){const e=decEnd(d);if(e&&e<month)ended.push(d)}});
+  D.ents.forEach(e=>{
+    if(e.month===month&&e.deferred&&(e.carried||[]).length){
+      const d=S.decisions[e.decId];
+      if(d&&d.status==='مستمر'&&!seen.has(d.id)){seen.add(d.id);noReply.push(d)}
+    }
+  });
+  return{ended,noReply};
+}
+
+/* ---------- writes ---------- */
+let queue=Promise.resolve();
+function enqueue(fn){const p=queue.then(fn);queue=p.catch(()=>{});return p}
+const setDoc=(col,id,data)=>enqueue(()=>db.collection(col).doc(id).set(data));
+const updDoc=(col,id,data)=>enqueue(()=>db.collection(col).doc(id).update(data));
+function logAudit(action,target,detail){
+  const id='a'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  return setDoc('audit',id,{id:id,ts:Date.now(),by:me.id,action:action,target:target||'',detail:detail||''});
+}
+function toast(msg){
+  const t=$('#toast');t.innerHTML='<div>'+esc(msg)+'</div>';
+  clearTimeout(toast.t);toast.t=setTimeout(()=>{t.innerHTML=''},3800);
+}
+function errMsg(e){
+  const c=e&&e.code;
+  if(c==='invalid_argument')return'تعذر الحفظ. على الأرجح ليس لديك صلاحية الكتابة في هذه الصفحة.';
+  if(c==='quota_exceeded')return'امتلأت سعة قاعدة البيانات. احذفي بيانات قديمة أو تواصلي مع المسؤول.';
+  if(c==='resource_exhausted')return'عدد كبير من العمليات في وقت قصير. انتظري لحظات وأعيدي المحاولة.';
+  return'تعذر الحفظ: '+((e&&e.message)||'خطأ غير معروف');
+}
+async function guard(fn){
+  if(!db){toast('قاعدة البيانات غير متاحة في هذا العرض.');return false}
+  if(canWrite===false){toast('حسابك للقراءة فقط.');return false}
+  try{await fn();return true}catch(e){toast(errMsg(e));return false}
+}
+function newId(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
+
+/* ---------- rendering ---------- */
+function tbl(heads,rows,emptyTitle,emptyText){
+  if(!rows.length)return'<div class="empty"><b>'+esc(emptyTitle)+'</b>'+esc(emptyText||'')+'</div>';
+  return'<div class="tw"><table><thead><tr>'+heads.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
+}
+const pill=(t,c)=>'<span class="pill '+(c||'')+'">'+esc(t)+'</span>';
+const code=c=>'<span class="num">'+esc(c)+'</span>';
+
+const SHELL={
+dash:()=>'<div id="dyn"></div>',
+cases:()=>'<div class="bar"><label>بحث بالكود أو الاسم<input id="f-casesQ" data-f="casesQ" value="'+esc(F.casesQ)+'" placeholder="اكتبي كود أو اسم"></label><span class="grow"></span><button class="btn primary w" data-act="newCase">+ حالة جديدة</button></div><div id="dyn"></div>',
+decisions:()=>'<div class="bar"><label>بحث بالكود أو الاسم<input id="f-decQ" data-f="decQ" value="'+esc(F.decQ)+'"></label><label>الحالة<select id="f-decStatus" data-f="decStatus">'+['','مستمر','موقوف','مسحوب'].map(v=>'<option value="'+v+'"'+(F.decStatus===v?' selected':'')+'>'+(v||'الكل')+'</option>').join('')+'</select></label><span class="grow"></span><button class="btn primary w" data-act="newDecision">+ قرار جديد</button></div><div id="dyn"></div>',
+monthly:()=>'<div class="bar"><div class="row" role="group" aria-label="نوع الخدمة">'+['مالي','كارت','عيني'].map(k=>'<button class="btn'+(F.entKind===k?' primary':'')+'" data-act="entKind" data-v="'+k+'">'+k+'</button>').join('')+'</div><label>بحث<input id="f-entQ" data-f="entQ" value="'+esc(F.entQ)+'" placeholder="كود أو اسم"></label><label>الحالة<select id="f-entStatus" data-f="entStatus">'+['','مستحق','تم الإرسال','تمت إعادة الإرسال','تم الصرف','لم يتم الصرف','مؤجل'].map(v=>'<option value="'+v+'"'+(F.entStatus===v?' selected':'')+'>'+(v||'الكل')+'</option>').join('')+'</select></label><span class="grow"></span><button class="btn w" data-act="generate">توليد استحقاقات الشهر</button></div><div id="bulkBar" class="bar w"></div><div id="dyn"></div>',
+follow:()=>'<div class="bar"><label>العرض<select id="f-fuView" data-f="fuView">'+[['open','متابعات مفتوحة (أحمر)'],['done','مكتملة (أخضر)'],['all','الكل']].map(v=>'<option value="'+v[0]+'"'+(F.fuView===v[0]?' selected':'')+'>'+v[1]+'</option>').join('')+'</select></label><label>بحث<input id="f-fuQ" data-f="fuQ" value="'+esc(F.fuQ)+'" placeholder="كود أو اسم"></label><span class="muted small">تظهر الاستحقاقات التي تم إرسالها فقط. المتابعة تكتمل بالرد أو بعد 3 محاولات.</span></div><div id="dyn"></div>',
+close:()=>'<div id="dyn"></div>',
+ops:()=>{
+  const types=TASKS.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+' · '+esc(t.team)+'</option>').join('');
+  return'<div class="card w" style="margin-bottom:16px"><h3>تسجيل عملية</h3><div class="fgrid"><label>نوع العملية<select id="op-type">'+types+'</select></label><label>التاريخ<input type="date" id="op-date" value="'+todayISO()+'"></label><label id="op-code-l">كود الحالة<input id="op-code" list="caseList" placeholder="كود الحالة"></label><label id="op-dept-l" hidden>الجهة أو الإدارة<input id="op-dept" placeholder="مثال: إدارة الحسابات"></label><label>الحالة<select id="op-status"><option>جديد</option><option>جاري</option><option>تم</option></select></label></div><label class="fgrid" style="margin-top:12px;display:block"><span class="muted small">ملاحظات</span><textarea id="op-notes"></textarea></label><div class="actions"><span class="muted small" id="op-info"></span><button class="btn primary" data-act="saveOp">حفظ العملية</button></div></div><div class="bar"><label>الفريق<select id="f-opTeam" data-f="opTeam"><option value="">الكل</option>'+TEAMS.map(t=>'<option'+(F.opTeam===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label><label>الحالة<select id="f-opStatus" data-f="opStatus">'+['','جديد','جاري','تم'].map(v=>'<option value="'+v+'"'+(F.opStatus===v?' selected':'')+'>'+(v||'الكل')+'</option>').join('')+'</select></label><label>بحث<input id="f-opQ" data-f="opQ" value="'+esc(F.opQ)+'" placeholder="نوع أو كود"></label></div><div id="dyn"></div>';
+},
+audit:()=>'<div id="dyn"></div>'
+};
+
+function renderTabs(){
+  $('#tabs').innerHTML=TABS.map(t=>'<button role="tab" data-act="tab" data-v="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+'</button>').join('');
+}
+function render(){
+  derive();
+  const main=$('#main');
+  if(shellTab!==tab){
+    main.innerHTML=SHELL[tab]()+'<datalist id="caseList">'+D.cases.map(c=>'<option value="'+esc(c.code)+'">'+esc(c.name)+'</option>').join('')+'</datalist>';
+    shellTab=tab;
+    if(tab==='ops')bindOpForm();
+  }else{
+    const dl=$('#caseList');if(dl)dl.innerHTML=D.cases.map(c=>'<option value="'+esc(c.code)+'">'+esc(c.name)+'</option>').join('');
+  }
+  $('#monthHint').textContent=(tab==='dash'||tab==='monthly'||tab==='follow'||tab==='close')?'':'الشهر يؤثر على: لوحة المتابعة، الاستحقاق الشهري، المتابعة، إغلاق الشهر';
+  $('#monthBar').hidden=!(tab==='dash'||tab==='monthly'||tab==='follow'||tab==='close');
+  $('#tabs').querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===tab)));
+  const dyn=$('#dyn');
+  if(dyn)DYN[tab](dyn);
+  if(tab==='monthly')renderBulkBar();
+  resolveNames();
+}
+let rq=0;
+function scheduleRender(){if(rq)return;rq=requestAnimationFrame(()=>{rq=0;render()})}
+
+const DYN={
+dash(el){
+  const ents=entsOf(month);
+  const done=ents.filter(followDone).length,open=ents.length-done;
+  const cl=closeLists();
+  const activeDec=D.decs.filter(d=>d.status==='مستمر').length;
+  const openOps=D.ops.filter(o=>o.status!=='تم').length;
+  let html='';
+  if(!D.cases.length&&loaded.cases){
+    html+='<div class="empty" style="margin-bottom:16px"><b>لا توجد بيانات بعد</b>ابدئي بإضافة حالة من تبويب «الحالات»، ثم أضيفي لها قراراً وبنوداً، وبعدها ولّدي استحقاقات الشهر.</div>';
+  }
+  html+='<div class="kpis">'
+   +'<div class="kpi"><b>'+ents.length+'</b><span>استحقاقات '+fmtMonth(month)+'</span></div>'
+   +'<div class="kpi"><b>'+ents.filter(e=>e.sent).length+'</b><span>تم إرسالها</span></div>'
+   +'<div class="kpi good"><b>'+done+'</b><span>متابعة مكتملة</span></div>'
+   +'<div class="kpi'+(open?' bad':'')+'"><b>'+open+'</b><span>متابعة مفتوحة</span></div>'
+   +'<div class="kpi"><b>'+ents.filter(e=>e.deferred).length+'</b><span>مؤجلة للشهر القادم</span></div>'
+   +'<div class="kpi"><b>'+activeDec+'</b><span>قرارات مستمرة</span></div>'
+   +'<div class="kpi'+((cl.ended.length+cl.noReply.length)?' bad':'')+'"><b>'+(cl.ended.length+cl.noReply.length)+'</b><span>قرارات تنتظر الإغلاق</span></div>'
+   +'<div class="kpi"><b>'+openOps+'</b><span>عمليات غير منتهية</span></div></div>';
+  const kinds=['مالي','كارت','عيني'];
+  const rows=kinds.map(k=>{
+    const x=ents.filter(e=>e.kind===k);
+    return'<tr><td>'+k+'</td><td class="n">'+x.length+'</td><td class="n">'+money(x.reduce((s,e)=>s+(+e.amount||0),0))+' ج</td><td class="n">'+x.filter(e=>e.sent).length+'</td><td class="n">'+x.filter(followDone).length+'</td></tr>';
+  });
+  const monthOps=D.ops.filter(o=>(o.date||'').slice(0,7)===month);
+  const byUser={};monthOps.forEach(o=>{byUser[o.by]=(byUser[o.by]||0)+(+o.weight||0)});
+  const maxW=Math.max(1,...Object.values(byUser));
+  const bars=Object.keys(byUser).sort((a,b)=>byUser[b]-byUser[a]).map(u=>'<div class="b"><span>'+esc(nameOf(u))+'</span><div class="t"><i style="width:'+Math.round(byUser[u]/maxW*100)+'%"></i></div><span class="n">'+(Math.round(byUser[u]*10)/10)+'</span></div>').join('');
+  html+='<div class="grid2"><div class="card"><h3>الصرف حسب النوع</h3><div class="tw" style="border:0"><table><thead><tr><th>النوع</th><th>الاستحقاقات</th><th>الإجمالي</th><th>أُرسل</th><th>متابعة مكتملة</th></tr></thead><tbody>'+rows.join('')+'</tbody></table></div></div>'
+   +'<div class="card"><h3>حجم الشغل في '+fmtMonth(month)+' (بالأوزان)</h3>'+(bars?'<div class="bars">'+bars+'</div>':'<p class="muted small">لا توجد عمليات مسجلة في هذا الشهر.</p>')+'</div></div>'
+   +'<div class="card" style="margin-top:16px"><h3>تجربة الدعوة بإيميل الشغل</h3><ol class="steps"><li>من قائمة المشاركة في الصفحة، أضيفي زميلاً بإيميله بصلاحية «تعديل».</li><li>يفتح الزميل الصفحة ويضيف حالة أو عملية.</li><li>افتحي «سجل التدقيق»: لو ظهر اسمه بجانب ما سجّله، فالكتابة وتسجيل الاسم يعملان.</li></ol></div>';
+  el.innerHTML=html;
+},
+cases(el){
+  const q=F.casesQ.trim();
+  const list=D.cases.filter(c=>!q||String(c.code).includes(q)||(c.name||'').includes(q)).sort((a,b)=>String(a.code).localeCompare(String(b.code),'en',{numeric:true}));
+  const rows=list.map(c=>{
+    const ds=D.decByCode[c.code]||[];
+    return'<tr><td>'+code(c.code)+'</td><td>'+esc(c.name)+'</td><td>'+esc(c.nationality||'—')+'</td><td>'+esc(c.gender||'—')+'</td><td class="n">'+(c.familySize||'—')+'</td><td class="n">'+ds.filter(d=>d.status==='مستمر').length+' / '+ds.length+'</td><td><button class="btn sm" data-act="caseFile" data-v="'+esc(c.code)+'">ملف الحالة</button></td></tr>';
+  });
+  el.innerHTML=tbl(['الكود','الاسم','الجنسية','النوع','عدد الأفراد','قرارات (مستمرة / كلها)',''],rows,D.cases.length?'لا نتائج':'لا توجد حالات بعد',D.cases.length?'جربي بحثاً آخر.':'اضغطي «حالة جديدة» لتسجيل أول حالة.');
+},
+decisions(el){
+  const q=F.decQ.trim();
+  const list=D.decs.filter(d=>(!F.decStatus||d.status===F.decStatus)&&(!q||String(d.code).includes(q)||caseName(d.code).includes(q))).sort((a,b)=>(b.issueDate||'').localeCompare(a.issueDate||''));
+  const rows=list.map(d=>{
+    const ls=(D.linesByDec[d.id]||[]).sort((a,b)=>a.id.localeCompare(b.id)).map(l=>{
+      const n=spanMonths(l.startMonth,l.endMonth);const mis=n!==+l.months;
+      return'<div class="small">'+esc(l.service)+' · '+money(l.amount)+' ج · '+fmtMonth(l.startMonth)+' ← '+fmtMonth(l.endMonth)+' ('+n+' شهر)'+(mis?' <span class="pill warn" title="'+esc(l.mismatchNote||'')+'">المكتوب '+l.months+'</span>':'')+'</div>';
+    }).join('');
+    const st=d.status==='مستمر'?'good':(d.status==='مسحوب'?'bad':'');
+    return'<tr><td class="n">'+esc(d.no||'')+'</td><td>'+code(d.code)+'<div class="small muted">'+esc(caseName(d.code))+'</div></td><td>'+pill(decKind(d),decKind(d)==='جديد'?'pri':'info')+'</td><td class="n">'+fmtDate(d.issueDate)+'</td><td>'+ls+'</td><td>'+fmtMonth(decEnd(d))+'</td><td>'+pill(d.status,st)+(d.stopReason?'<div class="small muted">'+esc(d.stopReason)+'</div>':'')+'</td><td style="white-space:nowrap"><button class="btn sm w" data-act="renew" data-v="'+d.id+'">تجديد</button> '+(d.status==='مستمر'?'<button class="btn sm bad w" data-act="stopOne" data-v="'+d.id+'">إيقاف / سحب</button>':'')+'</td></tr>';
+  });
+  el.innerHTML=tbl(['رقم','الحالة','النوع','تاريخ القرار','البنود','نهاية القرار','حالة القرار',''],rows,D.decs.length?'لا نتائج':'لا توجد قرارات بعد','أضيفي قراراً من زر «قرار جديد» بعد تسجيل الحالة.');
+},
+monthly(el){
+  const q=F.entQ.trim();
+  const list=entsOf(month).filter(e=>e.kind===F.entKind&&(!F.entStatus||entStatus(e)===F.entStatus)&&(!q||String(e.code).includes(q)||caseName(e.code).includes(q))).sort((a,b)=>String(a.code).localeCompare(String(b.code),'en',{numeric:true}));
+  const all=list.length&&list.every(e=>SEL.has(e.id));
+  const rows=list.map(e=>{
+    const s=entStatus(e);
+    const car=(e.carried||[]).length?'<div class="small"><span class="pill warn">شامل متأخر '+(e.carried.map(fmtMonth).join('، '))+'</span></div>':'';
+    return'<tr><td><input type="checkbox" data-sel="'+e.id+'" aria-label="تحديد"'+(SEL.has(e.id)?' checked':'')+'></td><td>'+code(e.code)+'</td><td>'+esc(caseName(e.code))+'</td><td>'+esc(e.service)+'</td><td class="n">'+money(e.amount)+' ج'+car+'</td><td>'+pill(s,statusClass[s])+(e.resentCount?'<div class="small muted">إعادة إرسال ×'+e.resentCount+'</div>':'')+'</td><td class="n">'+(e.sentAt?fmtTs(e.sentAt):'—')+'</td><td><span class="fu '+(followDone(e)?'done':'open')+'">'+(e.attempts||[]).length+'/3</span></td></tr>';
+  });
+  const total=list.reduce((s,e)=>s+(+e.amount||0),0);
+  el.innerHTML='<p class="muted small">'+fmtMonth(month)+' · '+F.entKind+' · '+list.length+' استحقاق · الإجمالي '+money(total)+' جنيه</p>'
+   +tbl(['<input type="checkbox" data-selall aria-label="تحديد الكل"'+(all?' checked':'')+'>','الكود','الاسم','الخدمة','القيمة','الحالة','تاريخ الإرسال','المتابعة'],rows,entsOf(month).length?'لا استحقاقات بهذه الفلاتر':'لم تُولَّد استحقاقات '+fmtMonth(month),entsOf(month).length?'غيّري الفلتر أو النوع.':'اضغطي «توليد استحقاقات الشهر» ليُنشأ الاستحقاق لكل بند ساري.');
+},
+follow(el){
+  const q=F.fuQ.trim();
+  const list=entsOf(month).filter(e=>e.sent&&(F.fuView==='all'||(F.fuView==='open'?!followDone(e):followDone(e)))&&(!q||String(e.code).includes(q)||caseName(e.code).includes(q))).sort((a,b)=>String(a.code).localeCompare(String(b.code),'en',{numeric:true}));
+  const rows=list.map(e=>{
+    const a=e.attempts||[];const dn=followDone(e);const s=entStatus(e);const c=S.cases[e.code]||{};
+    const last=a.length?a[a.length-1]:null;
+    return'<tr><td>'+code(e.code)+'</td><td>'+esc(caseName(e.code))+'<div class="small muted"><span class="num">'+esc(c.phone||'')+'</span></div></td><td>'+esc(e.service)+'<div class="small muted">'+money(e.amount)+' ج</div></td><td><span class="fu '+(dn?'done':'open')+'">'+a.length+'/3</span>'+(last?'<div class="small muted">آخر محاولة: '+fmtTs(last.at)+' · '+esc(nameOf(last.by))+'</div>':'')+'</td><td>'+pill(s,statusClass[s])+'</td><td style="white-space:nowrap">'
+     +(e.followResult||e.deferred?'':'<button class="btn sm w" data-act="attempt" data-v="'+e.id+'" data-a="0">لم يرد</button> <button class="btn sm good w" data-act="attempt" data-v="'+e.id+'" data-a="paid">رد · تم الصرف</button> <button class="btn sm bad w" data-act="attempt" data-v="'+e.id+'" data-a="notpaid">رد · لم يتم الصرف</button>')+'</td></tr>';
+  });
+  el.innerHTML=tbl(['الكود','الاسم','الخدمة','المحاولات','الحالة','تسجيل نتيجة الاتصال'],rows,'لا متابعات في هذا العرض','تظهر هنا الاستحقاقات بعد تسجيل «تم الإرسال» في تبويب الاستحقاق الشهري.');
+},
+close(el){
+  const cl=closeLists();
+  const sec=(title,hint,list,kind)=>{
+    const rows=list.map(d=>'<tr><td><input type="checkbox" data-sel2="'+kind+':'+d.id+'" aria-label="تحديد"'+(SEL.has(kind+':'+d.id)?' checked':'')+'></td><td class="n">'+esc(d.no||'')+'</td><td>'+code(d.code)+'</td><td>'+esc(caseName(d.code))+'</td><td>'+(D.linesByDec[d.id]||[]).map(l=>'<div class="small">'+esc(l.service)+' · حتى '+fmtMonth(l.endMonth)+'</div>').join('')+'</td><td>'+fmtMonth(decEnd(d))+'</td></tr>').join('');
+    return'<div class="card" style="margin-bottom:16px"><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px"><div><h3 style="margin:0">'+title+' <span class="pill '+(list.length?'bad':'good')+'">'+list.length+'</span></h3><div class="muted small">'+hint+'</div></div><span class="w" style="display:flex;gap:8px"><button class="btn sm" data-act="selClose" data-v="'+kind+'">تحديد الكل</button><button class="btn primary sm" data-act="stopSel" data-v="'+kind+'">تحويل المحدد إلى موقوف</button></span></div>'
+     +(list.length?'<div class="tw"><table><thead><tr><th></th><th>رقم</th><th>الكود</th><th>الاسم</th><th>البنود</th><th>نهاية القرار</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty">لا توجد قرارات في هذه القائمة.</div>')+'</div>';
+  };
+  el.innerHTML=sec('انتهت مدتهم قبل '+fmtMonth(month),'قرارات حالتها «مستمر» وانتهت كل بنودها قبل هذا الشهر.',cl.ended,'ended')
+   +sec('عدم رد لشهرين متتاليين','استحقاقات '+fmtMonth(month)+' المؤجلة وعليها متأخر من الشهر السابق.',cl.noReply,'noreply');
+},
+ops(el){
+  const q=F.opQ.trim();
+  const list=D.ops.filter(o=>(!F.opTeam||o.team===F.opTeam)&&(!F.opStatus||o.status===F.opStatus)&&(!q||(o.type||'').includes(q)||String(o.code||'').includes(q)||(o.dept||'').includes(q))).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.createdAt||0)-(a.createdAt||0));
+  const rows=list.map(o=>'<tr><td class="n">'+fmtDate(o.date)+'</td><td>'+esc(o.type)+(o.notes?'<div class="small muted">'+esc(o.notes)+'</div>':'')+'</td><td>'+esc(o.team)+'</td><td>'+pill(o.scope,o.scope==='حالة'?'pri':'')+'</td><td>'+(o.scope==='حالة'?code(o.code)+'<div class="small muted">'+esc(caseName(o.code))+'</div>':esc(o.dept||'—'))+'</td><td>'+esc(nameOf(o.by))+'</td><td class="n">'+o.weight+'</td><td><select data-opstatus="'+o.id+'" class="w" aria-label="حالة العملية">'+['جديد','جاري','تم'].map(s=>'<option'+(o.status===s?' selected':'')+'>'+s+'</option>').join('')+'</select></td></tr>');
+  el.innerHTML=tbl(['التاريخ','العملية','الفريق','التصنيف','الحالة / الجهة','المسؤول','الوزن','الحالة'],rows,D.ops.length?'لا نتائج':'لا توجد عمليات بعد','سجلي أول عملية من النموذج بالأعلى.');
+},
+audit(el){
+  const rows=D.audit.slice(0,200).map(a=>'<tr><td class="n" style="white-space:nowrap">'+fmtTs(a.ts)+'</td><td>'+esc(nameOf(a.by))+'</td><td>'+esc(a.action)+'</td><td>'+esc(a.target)+'</td><td class="small">'+esc(a.detail)+'</td></tr>');
+  el.innerHTML='<p class="muted small">آخر 200 تسجيل. يسجّل النظام اسم من أضاف أو غيّر كل عنصر.</p>'+tbl(['الوقت','المستخدم','الإجراء','العنصر','تفاصيل'],rows,'لا يوجد سجل بعد','سيظهر هنا كل ما يتم تسجيله أو تعديله.');
+}
+};
+
+function renderBulkBar(){
+  const el=$('#bulkBar');if(!el)return;
+  const acts=BULK[F.entKind]||[];
+  el.innerHTML='<span class="muted small">المحدد: <b>'+SEL.size+'</b></span>'+acts.map(a=>'<button class="btn good sm" data-act="bulk" data-v="'+a.act+'"'+(SEL.size?'':' disabled')+'>'+a.label+'</button>').join('')+'<button class="btn sm" data-act="clearSel"'+(SEL.size?'':' disabled')+'>إلغاء التحديد</button>';
+}
+
+/* ---------- names ---------- */
+async function resolveNames(){
+  if(!user||!user.profiles)return;
+  const ids=new Set();
+  D.audit.forEach(a=>a.by&&ids.add(a.by));D.ops.forEach(o=>o.by&&ids.add(o.by));
+  D.ents.forEach(e=>(e.attempts||[]).forEach(a=>a.by&&ids.add(a.by)));
+  const need=[...ids].filter(i=>i!==me.id&&!askedNames.has(i));
+  if(!need.length)return;
+  need.forEach(i=>askedNames.add(i));
+  try{
+    const ps=await user.profiles(need);let any=false;
+    need.forEach(i=>{if(ps[i]&&ps[i].name){names[i]=ps[i].name;any=true}});
+    if(any)scheduleRender();
+  }catch(e){}
+}
+
+/* ---------- modal ---------- */
+function openModal(html){const m=$('#modal');m.innerHTML='<div class="sheet" role="dialog" aria-modal="true">'+html+'</div>';m.hidden=false;const f=m.querySelector('input,select,textarea');if(f)f.focus()}
+function closeModal(){const m=$('#modal');m.hidden=true;m.innerHTML='';DF=null}
+
+/* ---------- case form + case file ---------- */
+function openCaseForm(c){
+  const v=c||{};
+  openModal('<h2>'+(c?'تعديل حالة':'حالة جديدة')+'</h2><div class="fgrid">'
+   +'<label>الكود<input id="c-code" value="'+esc(v.code||'')+'"'+(c?' disabled':'')+' inputmode="numeric"></label>'
+   +'<label>اسم الحالة<input id="c-name" value="'+esc(v.name||'')+'"></label>'
+   +'<label>تاريخ الميلاد<input type="date" id="c-birth" value="'+esc(v.birth||'')+'"></label>'
+   +'<label>الجنسية<input id="c-nat" list="natList" value="'+esc(v.nationality||'')+'"><datalist id="natList">'+NATS.map(n=>'<option value="'+n+'">').join('')+'</datalist></label>'
+   +'<label>النوع<select id="c-gender">'+['','ذكر','أنثى'].map(g=>'<option'+(v.gender===g?' selected':'')+'>'+g+'</option>').join('')+'</select></label>'
+   +'<label>عدد الأفراد<input type="number" min="1" id="c-fam" value="'+esc(v.familySize||'')+'"></label>'
+   +'<label>المحافظة<input id="c-gov" value="'+esc(v.governorate||'')+'"></label>'
+   +'<label>هاتف<input id="c-phone" value="'+esc(v.phone||'')+'" inputmode="tel"></label>'
+   +'</div><div class="actions"><button class="btn primary" data-act="saveCase" data-v="'+esc(v.code||'')+'">حفظ</button><button class="btn" data-act="closeModal">إلغاء</button></div>');
+}
+async function saveCase(editing){
+  const g=id=>$('#'+id).value.trim();
+  const cd=editing||g('c-code');
+  if(!cd)return toast('اكتبي كود الحالة.');
+  if(!g('c-name'))return toast('اكتبي اسم الحالة.');
+  if(!editing&&S.cases[cd])return toast('هذا الكود مسجل من قبل. افتحي ملف الحالة وعدّلي بياناتها.');
+  const data={id:cd,code:cd,name:g('c-name'),birth:g('c-birth'),nationality:g('c-nat'),gender:g('c-gender'),familySize:+g('c-fam')||0,governorate:g('c-gov'),phone:g('c-phone')};
+  const ok=await guard(async()=>{
+    if(editing){await updDoc('cases',cd,data);await logAudit('تعديل حالة',cd,data.name)}
+    else{data.createdAt=Date.now();data.createdBy=me.id;await setDoc('cases',cd,data);await logAudit('تسجيل حالة',cd,data.name)}
+  });
+  if(ok){closeModal();toast('تم حفظ الحالة.')}
+}
+function openCaseFile(cd){
+  const c=S.cases[cd];if(!c)return;
+  const ds=(D.decByCode[cd]||[]).slice().sort((a,b)=>(b.issueDate||'').localeCompare(a.issueDate||''));
+  const tl=[];
+  ds.forEach(d=>tl.push({w:d.issueDate||'',t:'قرار '+(d.no||'')+' ('+decKind(d)+') · '+d.status+' · '+(D.linesByDec[d.id]||[]).map(l=>l.service).join('، ')}));
+  D.ents.filter(e=>e.code===cd).forEach(e=>tl.push({w:e.sentAt?new Date(e.sentAt).toISOString().slice(0,10):e.month+'-01',t:fmtMonth(e.month)+' · '+e.service+' · '+entStatus(e)+' · متابعة '+(e.attempts||[]).length+'/3'}));
+  D.ops.filter(o=>o.code===cd).forEach(o=>tl.push({w:o.date||'',t:o.type+' · '+nameOf(o.by)+' · '+o.status}));
+  tl.sort((a,b)=>b.w.localeCompare(a.w));
+  const dec=ds.map(d=>'<div class="card" style="margin-bottom:10px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>قرار '+esc(d.no||'')+'</b>'+pill(decKind(d),decKind(d)==='جديد'?'pri':'info')+pill(d.status,d.status==='مستمر'?'good':(d.status==='مسحوب'?'bad':''))+'<span class="muted small">'+fmtDate(d.issueDate)+'</span></div><div class="small" style="margin:6px 0">'+esc(d.text||'')+'</div>'+(D.linesByDec[d.id]||[]).map(l=>'<div class="small">• '+esc(l.service)+' · '+money(l.amount)+' ج · '+fmtMonth(l.startMonth)+' ← '+fmtMonth(l.endMonth)+'</div>').join('')+'</div>').join('');
+  openModal('<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><h2>'+esc(c.name)+' <span class="muted num" style="font-size:15px">'+esc(c.code)+'</span></h2><span style="display:flex;gap:8px"><button class="btn sm w" data-act="editCase" data-v="'+esc(cd)+'">تعديل البيانات</button><button class="btn sm" data-act="closeModal">إغلاق</button></span></div>'
+   +'<div class="fgrid small" style="margin-bottom:14px"><div><span class="muted">الجنسية</span><br>'+esc(c.nationality||'—')+'</div><div><span class="muted">النوع</span><br>'+esc(c.gender||'—')+'</div><div><span class="muted">الميلاد</span><br>'+fmtDate(c.birth)+'</div><div><span class="muted">عدد الأفراد</span><br>'+(c.familySize||'—')+'</div><div><span class="muted">المحافظة</span><br>'+esc(c.governorate||'—')+'</div><div><span class="muted">هاتف</span><br><span class="num">'+esc(c.phone||'—')+'</span></div></div>'
+   +'<div class="grid2"><div><h3 style="margin-bottom:8px">القرارات</h3>'+(dec||'<p class="muted small">لا توجد قرارات.</p>')+'<button class="btn primary sm w" data-act="newDecisionFor" data-v="'+esc(cd)+'">+ قرار جديد لهذه الحالة</button></div><div><h3 style="margin-bottom:8px">الخط الزمني</h3>'+(tl.length?'<ul class="tl">'+tl.map(x=>'<li><span class="d">'+fmtDate(x.w)+'</span>'+esc(x.t)+'</li>').join('')+'</ul>':'<p class="muted small">لا توجد أحداث.</p>')+'</div></div>');
+}
+
+/* ---------- decision form ---------- */
+let DF=null;
+function newLine(start){return{service:SERVICES[0].name,amount:'',months:12,start:start||'',end:start?addMonths(start,11):'',note:'',tS:false,tE:false}}
+function openDecisionForm(opts){
+  opts=opts||{};
+  const issue=todayISO();
+  const st=suggestStart(issue);
+  DF={code:opts.code||'',text:opts.text||'',donor:opts.donor||'',issue:issue,lines:[]};
+  if(opts.lines&&opts.lines.length){
+    DF.lines=opts.lines.map(l=>({service:l.service,amount:l.amount,months:l.months,start:st,end:addMonths(st,l.months-1),note:'',tS:false,tE:false}));
+  }else DF.lines=[newLine(st)];
+  drawDF();
+}
+function drawDF(){
+  const hasCase=!!S.cases[DF.code];
+  openModal('<h2>'+(DF.renew?'تجديد قرار':'قرار جديد')+'</h2><div class="fgrid">'
+   +'<label>كود الحالة<input id="df-code" list="caseList" value="'+esc(DF.code)+'"></label>'
+   +'<label>اسم الحالة<input id="df-name" value="'+esc(hasCase?S.cases[DF.code].name:'')+'" disabled></label>'
+   +'<label>تاريخ القرار<input type="date" id="df-issue" value="'+esc(DF.issue)+'"></label>'
+   +'<label>المتبرع<input id="df-donor" value="'+esc(DF.donor)+'"></label></div>'
+   +'<p class="note" id="df-sug" style="margin:12px 0"></p>'
+   +'<label class="fgrid" style="display:block;margin-bottom:12px"><span class="muted small">نص القرار</span><textarea id="df-text">'+esc(DF.text)+'</textarea></label>'
+   +'<h3 style="margin-bottom:8px">بنود القرار</h3><div id="df-lines"></div>'
+   +'<button class="btn sm" data-act="addLine">+ إضافة بند</button>'
+   +'<div class="actions"><button class="btn primary" data-act="saveDecision">حفظ القرار</button><button class="btn" data-act="closeModal">إلغاء</button></div>');
+  drawLines();
+}
+function drawLines(){
+  const sug=suggestStart(DF.issue);
+  $('#df-sug').textContent=DF.issue?'بداية الصرف المقترحة من تاريخ القرار: '+fmtMonth(sug)+' (دورة 19 إلى 18)':'';
+  $('#df-lines').innerHTML=DF.lines.map((l,i)=>{
+    const n=(l.start&&l.end)?spanMonths(l.start,l.end):0;
+    const mis=n!==+l.months;
+    return'<div class="lrow" data-i="'+i+'"><div class="fgrid">'
+     +'<label>الخدمة<select data-lf="service">'+SERVICES.map(s=>'<option'+(s.name===l.service?' selected':'')+'>'+s.name+'</option>').join('')+'</select></label>'
+     +'<label>القيمة الشهرية (جنيه)<input type="number" min="0" data-lf="amount" value="'+esc(l.amount)+'"></label>'
+     +'<label>المدة المكتوبة (شهر)<input type="number" min="1" data-lf="months" value="'+esc(l.months)+'"></label>'
+     +'<label>من شهر<select data-lf="start">'+monthOpts(l.start)+'</select></label>'
+     +'<label>إلى شهر (محسوب)<select data-lf="end">'+monthOpts(l.end)+'</select></label></div>'
+     +(mis?'<div class="warnline">تنبيه: المدة المكتوبة '+l.months+' شهر والمحسوبة من التواريخ '+n+' شهر (أول وآخر شهر محسوبان). اكتبي ملاحظة تأكيد.</div><label style="display:block;margin-top:8px"><textarea data-lf="note" placeholder="سبب الاختلاف، مثل: صرف 3 شهور زيادة">'+esc(l.note)+'</textarea></label>':'<div class="okline">المدة المحسوبة '+n+' شهر · '+esc(svc(l.service).cycle)+'</div>')
+     +'<div style="margin-top:8px"><button class="btn sm bad" data-act="rmLine" data-v="'+i+'">حذف البند</button></div></div>';
+  }).join('');
+}
+function onLineChange(i,f,v){
+  const l=DF.lines[i];
+  if(f==='service'){l.service=v;if(svc(v).cycle==='مرة واحدة'){l.months=1;l.end=l.start}}
+  else if(f==='amount'){l.amount=v;return}
+  else if(f==='note'){l.note=v;return}
+  else if(f==='months'){l.months=Math.max(1,+v||1);if(!l.tE&&l.start)l.end=addMonths(l.start,l.months-1)}
+  else if(f==='start'){l.start=v;l.tS=true;if(!l.tE)l.end=addMonths(v,l.months-1)}
+  else if(f==='end'){l.end=v;l.tE=true}
+  drawLines();
+}
+async function saveDecision(){
+  const g=id=>$('#'+id).value.trim();
+  DF.code=g('df-code');DF.text=g('df-text');DF.donor=g('df-donor');DF.issue=g('df-issue');
+  if(!S.cases[DF.code])return toast('كود الحالة غير مسجل. سجلي الحالة أولاً.');
+  if(!DF.issue)return toast('اختاري تاريخ القرار.');
+  if(!DF.text)return toast('اكتبي نص القرار.');
+  if(!DF.lines.length)return toast('أضيفي بنداً واحداً على الأقل.');
+  const cleaned=[];
+  for(let i=0;i<DF.lines.length;i++){
+    const l=DF.lines[i];const n=spanMonths(l.start,l.end);
+    if(!l.start||!l.end||n<1)return toast('البند '+(i+1)+': تواريخ غير صحيحة.');
+    if(l.amount===''||isNaN(+l.amount))return toast('البند '+(i+1)+': اكتبي القيمة.');
+    if(n!==+l.months&&!l.note.trim())return toast('البند '+(i+1)+': المدة المكتوبة تخالف المحسوبة. اكتبي ملاحظة.');
+    const ov=overlap(DF.code,l.service,l.start,l.end,null);
+    if(ov)return toast('البند '+(i+1)+': للحالة بند «'+l.service+'» ساري في قرار '+(ov.dec.no||'')+' ('+fmtMonth(ov.line.startMonth)+' إلى '+fmtMonth(ov.line.endMonth)+'). أوقفي القرار القديم أولاً.');
+    cleaned.push(l);
+  }
+  const id=newId('d');const no='ق-'+pad(D.decs.length+1);
+  const ok=await guard(async()=>{
+    await setDoc('decisions',id,{id:id,no:no,code:DF.code,text:DF.text,donor:DF.donor,issueDate:DF.issue,status:'مستمر',createdAt:Date.now(),createdBy:me.id});
+    for(let i=0;i<cleaned.length;i++){
+      const l=cleaned[i];const lid=id+'_'+(i+1);
+      await setDoc('lines',lid,{id:lid,decId:id,code:DF.code,service:l.service,amount:+l.amount,months:+l.months,startMonth:l.start,endMonth:l.end,mismatchNote:l.note.trim()});
+    }
+    await logAudit('قرار جديد',DF.code,no+' · '+cleaned.length+' بنود');
+  });
+  if(ok){closeModal();toast('تم حفظ القرار '+no+'.')}
+}
+function openStopForm(ids,status,label){
+  openModal('<h2>'+label+'</h2><label class="fgrid" style="display:block"><span class="muted small">السبب</span><input id="st-reason" style="width:100%" placeholder="مثال: انتهاء المدة، عدم الرد لشهرين متتاليين، سحب القرار"></label><div class="actions"><button class="btn primary" data-act="doStop" data-ids="'+ids.join(',')+'" data-v="'+status+'">تأكيد</button><button class="btn" data-act="closeModal">إلغاء</button></div>');
+}
+async function stopDecisions(ids,status,reason){
+  const ok=await guard(async()=>{
+    for(const id of ids){await updDoc('decisions',id,{status:status,stopReason:reason,stopDate:todayISO(),stoppedBy:me.id})}
+    await logAudit('تغيير حالة قرار',ids.length+' قرار',status+(reason?' · '+reason:''));
+  });
+  if(ok){closeModal();SEL.clear();toast('تم تحويل '+ids.length+' قرار إلى «'+status+'».')}
+}
+
+/* ---------- monthly generation, bulk, follow-up ---------- */
+async function generateMonth(){
+  const todo=[];
+  D.decs.filter(d=>d.status==='مستمر').forEach(d=>{
+    (D.linesByDec[d.id]||[]).forEach(l=>{
+      const s=svc(l.service);if(s.kind==='تغطية')return;
+      const inRange=s.cycle==='مرة واحدة'?l.startMonth===month:(l.startMonth<=month&&month<=l.endMonth);
+      if(!inRange)return;
+      const id=l.id+'_'+month;if(S.ents[id])return;
+      const prev=S.ents[l.id+'_'+addMonths(month,-1)];
+      const carried=(prev&&entStatus(prev)==='مؤجل')?(prev.carried||[]).concat([addMonths(month,-1)]):[];
+      todo.push({id:id,code:l.code,decId:l.decId,lineId:l.id,service:l.service,kind:s.kind,month:month,base:+l.amount,amount:(+l.amount)*(1+carried.length),carried:carried,sent:false,attempts:[],followResult:null,deferred:false,createdAt:Date.now(),createdBy:me.id});
+    });
+  });
+  if(!todo.length)return toast('لا توجد استحقاقات جديدة لـ'+fmtMonth(month)+'.');
+  toast('جارٍ توليد '+todo.length+' استحقاق…');
+  const ok=await guard(async()=>{for(const e of todo)await setDoc('ents',e.id,e);await logAudit('توليد استحقاقات',fmtMonth(month),todo.length+' استحقاق')});
+  if(ok)toast('تم توليد '+todo.length+' استحقاق لـ'+fmtMonth(month)+'.');
+}
+async function bulkApply(act){
+  const ids=[...SEL].filter(id=>S.ents[id]&&S.ents[id].kind===F.entKind);
+  const label=(BULK[F.entKind]||[]).find(a=>a.act===act).label;
+  let n=0,skip=0;
+  const ok=await guard(async()=>{
+    for(const id of ids){
+      const e=S.ents[id];
+      if(act==='send'&&e.sent){skip++;continue}
+      if(act==='resend'&&!e.sent){skip++;continue}
+      const patch=act==='send'?{sent:true,sentAt:Date.now(),sentBy:me.id}:{sent:true,sentAt:Date.now(),sentBy:me.id,resentCount:(e.resentCount||0)+1,attempts:[],followResult:null,deferred:false};
+      await updDoc('ents',id,patch);n++;
+    }
+    if(n)await logAudit(label,fmtMonth(month)+' · '+F.entKind,n+' استحقاق');
+  });
+  if(ok){SEL.clear();toast(n?'تم تطبيق «'+label+'» على '+n+' استحقاق'+(skip?' وتخطي '+skip:'')+'.':'لا استحقاقات مناسبة في التحديد.')}
+}
+async function recordAttempt(id,a){
+  const e=S.ents[id];if(!e)return;
+  const attempts=(e.attempts||[]).concat([{at:Date.now(),by:me.id,answered:a!=='0'}]);
+  const patch={attempts:attempts};
+  let msg='';
+  if(a==='paid'){patch.followResult='تم الصرف';msg='سُجل: رد وتم الصرف.'}
+  else if(a==='notpaid'){patch.followResult='لم يتم الصرف';msg='سُجل: رد ولم يتم الصرف.'}
+  else if(attempts.length>=3){patch.deferred=true;patch.followResult='لم يتم الصرف';msg='اكتملت 3 محاولات بدون رد. تأجل الاستحقاق للشهر القادم.'}
+  else msg='سُجلت المحاولة '+attempts.length+' من 3.';
+  const ok=await guard(async()=>{await updDoc('ents',id,patch);await logAudit('متابعة',e.code,e.service+' · '+fmtMonth(e.month)+' · '+msg)});
+  if(ok)toast(msg);
+}
+
+/* ---------- operations form ---------- */
+function bindOpForm(){
+  const sel=$('#op-type');if(!sel)return;
+  const upd=()=>{
+    const t=TASKS[+sel.value];
+    $('#op-code-l').hidden=t.scope!=='حالة';
+    $('#op-dept-l').hidden=t.scope==='حالة';
+    $('#op-info').textContent='الفريق: '+t.team+' · التصنيف: '+t.scope+' · الوزن: '+t.weight;
+  };
+  sel.addEventListener('change',upd);upd();
+}
+async function saveOp(){
+  const t=TASKS[+$('#op-type').value];
+  const cd=$('#op-code').value.trim(),dept=$('#op-dept').value.trim();
+  if(t.scope==='حالة'&&!S.cases[cd])return toast('اكتبي كود حالة مسجل لهذه العملية.');
+  if(t.scope==='عامة'&&!dept)return toast('اكتبي الجهة أو الإدارة.');
+  const id=newId('o');
+  const ok=await guard(async()=>{
+    await setDoc('ops',id,{id:id,type:t.name,team:t.team,weight:t.weight,scope:t.scope,code:t.scope==='حالة'?cd:'',dept:t.scope==='عامة'?dept:'',date:$('#op-date').value||todayISO(),status:$('#op-status').value,notes:$('#op-notes').value.trim(),by:me.id,createdAt:Date.now()});
+    await logAudit('عملية',t.scope==='حالة'?cd:dept,t.name);
+  });
+  if(ok){$('#op-code').value='';$('#op-dept').value='';$('#op-notes').value='';toast('تم تسجيل العملية.')}
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');
+  if(e.target.id==='modal'){closeModal();return}
+  if(!b)return;
+  const a=b.dataset.act,v=b.dataset.v;
+  switch(a){
+    case'tab':tab=v;render();break;
+    case'closeModal':closeModal();break;
+    case'newCase':openCaseForm();break;
+    case'saveCase':saveCase(v);break;
+    case'editCase':openCaseForm(S.cases[v]);break;
+    case'caseFile':openCaseFile(v);break;
+    case'newDecision':openDecisionForm();break;
+    case'newDecisionFor':openDecisionForm({code:v});break;
+    case'renew':{const d=S.decisions[v];openDecisionForm({code:d.code,text:d.text,donor:d.donor,lines:(D.linesByDec[d.id]||[]).map(l=>({service:l.service,amount:l.amount,months:l.months}))});DF.renew=true;drawDF();break}
+    case'addLine':DF.lines.push(newLine(suggestStart(DF.issue)));drawLines();break;
+    case'rmLine':if(DF.lines.length>1){DF.lines.splice(+v,1);drawLines()}else toast('يجب أن يبقى بند واحد على الأقل.');break;
+    case'saveDecision':saveDecision();break;
+    case'stopOne':openStopForm([v],'موقوف','إيقاف أو سحب قرار');break;
+    case'doStop':{const ids=b.dataset.ids.split(',');const r=$('#st-reason').value.trim();if(!r)return toast('اكتبي السبب.');stopDecisions(ids,v,r);break}
+    case'entKind':F.entKind=v;SEL.clear();shellTab=null;render();break;
+    case'generate':generateMonth();break;
+    case'bulk':bulkApply(v);break;
+    case'clearSel':SEL.clear();render();break;
+    case'attempt':recordAttempt(v,b.dataset.a);break;
+    case'selClose':{const list=closeLists()[v==='ended'?'ended':'noReply'];list.forEach(d=>SEL.add(v+':'+d.id));render();break}
+    case'stopSel':{const ids=[...SEL].filter(k=>k.startsWith(v+':')).map(k=>k.split(':')[1]);if(!ids.length)return toast('حددي قراراً واحداً على الأقل.');const reason=v==='ended'?'انتهاء المدة':'عدم الرد لشهرين متتاليين';stopDecisions(ids,'موقوف',reason);break}
+    case'saveOp':saveOp();break;
+  }
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='monthSel'){month=t.value;SEL.clear();render();return}
+  if(t.dataset.f){F[t.dataset.f]=t.value;render();return}
+  if(t.dataset.sel){t.checked?SEL.add(t.dataset.sel):SEL.delete(t.dataset.sel);render();return}
+  if(t.dataset.sel2){t.checked?SEL.add(t.dataset.sel2):SEL.delete(t.dataset.sel2);return}
+  if(t.hasAttribute('data-selall')){const list=entsOf(month).filter(x=>x.kind===F.entKind);list.forEach(x=>t.checked?SEL.add(x.id):SEL.delete(x.id));render();return}
+  if(t.dataset.opstatus){const id=t.dataset.opstatus;const o=S.ops[id];guard(async()=>{await updDoc('ops',id,{status:t.value});await logAudit('تحديث عملية',o.code||o.dept,o.type+' ← '+t.value)});return}
+  if(DF){
+    if(t.id==='df-code'){DF.code=t.value.trim();const n=$('#df-name');if(n)n.value=S.cases[DF.code]?S.cases[DF.code].name:'';return}
+    if(t.id==='df-issue'){DF.issue=t.value;const st=suggestStart(DF.issue);DF.lines.forEach(l=>{if(!l.tS){l.start=st;if(!l.tE)l.end=addMonths(st,l.months-1)}});drawLines();return}
+    const row=t.closest('.lrow');if(row&&t.dataset.lf){onLineChange(+row.dataset.i,t.dataset.lf,t.value)}
+  }
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset&&t.dataset.f&&t.tagName==='INPUT'){F[t.dataset.f]=t.value;scheduleRender()}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#modal').hidden)closeModal()});
+
+/* ---------- boot ---------- */
+async function boot(){
+  $('#monthSel').innerHTML=monthOpts(month);
+  renderTabs();render();
+  const c=window.claude;
+  if(!c||!c.use){$('#meChip').textContent='غير متصل';$('#loadNote').innerHTML='<div class="notice">قاعدة البيانات غير متاحة في هذا العرض. افتحي الصفحة من رابطها بعد تسجيل الدخول.</div>';return}
+  const lim=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(()=>r(null),ms))]);
+  try{user=await lim(c.use('user'),8000)}catch(e){user=null}
+  try{db=await lim(c.use('db'),8000)}catch(e){db=null}
+  if(user){try{const m=await lim(user.me(),5000);if(m)me={id:m.id||'anon',name:m.name||''};canWrite=await lim(user.can('data.write'),5000)}catch(e){}}
+  $('#meChip').textContent=me.name?('أنت: '+me.name):'مستخدم';
+  const pc=$('#permChip');pc.hidden=false;
+  if(canWrite===false){pc.textContent='قراءة فقط';pc.className='chip no';document.documentElement.classList.add('ro');$('#app').classList.add('ro')}
+  else if(canWrite===true){pc.textContent='صلاحية كتابة';pc.className='chip ok'}
+  else{pc.textContent='الصلاحية غير مؤكدة';pc.className='chip'}
+  if(!db){$('#loadNote').innerHTML='<div class="notice">قاعدة البيانات غير متاحة لهذا الحساب أو هذا العرض.</div>';return}
+  const timer=setTimeout(()=>{if(Object.keys(loaded).length<6)$('#loadNote').innerHTML='<div class="notice">تعذر الوصول للبيانات حالياً، وقد تكون المعروضة غير محدّثة.</div>'},10000);
+  ['cases','decisions','lines','ents','ops','audit'].forEach(col=>{
+    const q=col==='audit'?db.collection(col).orderBy('ts','desc').limit(200):db.collection(col);
+    q.onSnapshot(snap=>{
+      const m={};snap.docs.forEach(d=>{m[d.id]=Object.assign({},d.data(),{id:d.id})});
+      S[col]=m;
+      if(!snap.metadata.fromCache)loaded[col]=true;else loaded[col]=loaded[col]||false;
+      if(Object.values(loaded).filter(Boolean).length>=6){clearTimeout(timer);$('#loadNote').innerHTML=''}
+      scheduleRender();
+    },err=>{$('#loadNote').innerHTML='<div class="notice">تعذر قراءة البيانات ('+esc(err&&err.code||'خطأ')+').</div>'});
+  });
+}
+boot();
+})();
+</script>
+
+</body></html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<link rel="icon" href="assets/brand/logo.png">
+<title>نظام الإدارة الاجتماعية</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+</head>
+<body>
+<div id="app" dir="rtl" lang="ar">
+  <header class="hdr">
+    <div class="brand">
+      <picture>
+        <source srcset="assets/brand/logo-white.png" media="(prefers-color-scheme: dark)">
+        <img src="assets/brand/logo.png" alt="مؤسسة مرسال" width="82" height="52">
+      </picture>
+      <span class="sep" aria-hidden="true"></span>
+      <div>
+        <h1>نظام الإدارة الاجتماعية</h1>
+        <div class="sub">من القرار حتى استلام المستفيد ومتابعة موقفه طوال مدة الاستحقاق</div>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="chip" id="modeChip">جارٍ الاتصال…</span>
+      <span class="chip" id="meChip">—</span>
+      <span class="chip" id="roleChip"></span>
+    </div>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div class="bar" id="monthBar">
+    <label>الشهر<select id="monthSel" aria-label="الشهر"></select></label>
+  </div>
+  <div id="loadNote"></div>
+  <main id="main"></main>
+  <footer class="foot"><img src="assets/brand/logo.png" alt="" aria-hidden="true"><span>مؤسسة مرسال · الإدارة الاجتماعية</span></footer>
+</div>
+<div id="modal" class="modal" hidden></div>
+<div class="toast" id="toast" aria-live="polite"></div>
+
+<script src="assets/store.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
