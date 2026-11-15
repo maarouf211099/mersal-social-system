@@ -49,6 +49,12 @@ cd mersal-social-system && git pull && set DEPLOY_DIR=D:\apis\mersal-social && n
 
 اختبار بعد الربط (نفس اختبارات البوابة): الدخول من البوابة يفتح على طول · فتح رابط التذكرة مرة تانية يرجع `?sso=invalid` · موظف مالوش حساب يرجع `?sso=nouser` · `/api/portal/summary` من غير توكن يرجع 401.
 
+## نسيان كلمة المرور (على السيرفر)
+```
+cd D:\src\mersal-social-system && git pull && node scripts/reset-password.mjs --dir D:\apis\mersal-social --email الإيميل
+```
+بيطبع كلمة مرور مؤقتة جديدة، ويفعّل الحساب لو كان موقوف، ويتسجل في سجل التدقيق. للموظفين العاديين: المدير يقدر يعمل ده من شاشة «المستخدمون».
+
 ## النسخ الاحتياطي
 ```
 set DEPLOY_DIR=D:\apis\mersal-social && node scripts/backup.mjs
