@@ -10,11 +10,14 @@ import { canFollow, followRequired } from "@/lib/stage";
 import { NOTPAID_REASONS, POLICY_LABELS, RECV_METHODS, REFUND_REASONS, REFUND_TYPE_LABELS, SETTLEMENT_LABELS, TASK_STATUS_LABELS } from "@/lib/constants";
 import { addMonths, fmtMonth } from "@/lib/months";
 import { fmtDate, fmtTs, money } from "@/lib/format";
-import { approveHold, confirmData, followCall, followNotPaid, recordRefund, recordTransfer, setStuck } from "@/actions/cycle";
+import { approveHold, confirmData, followCall, followNotPaid, recordRefund, recordTransfer, resendCard, setStuck } from "@/actions/cycle";
+import { correctTransfer } from "@/actions/corrections";
+import { isoDate } from "@/lib/format";
 import { CaseLink, PageHead, StageBadge } from "@/components/ui";
 import { ActionForm, Submit } from "@/components/forms";
 import { CaseFields } from "@/components/CaseFields";
 import { Steps } from "@/components/Steps";
+import { Attachments } from "@/components/Attachments";
 
 export default async function EntitlementPage({ params }: { params: Promise<{ id: string }> }) {
   const u = await requirePageUser();
@@ -22,7 +25,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
   const st = await getSettings();
   const e = await loadEnt(id, st.followDays);
   if (!e) notFound();
-  const [c, attempts, refunds, tasks, prev, names, batch] = await Promise.all([
+  const [c, attempts, refunds, tasks, prev, names, batch, files] = await Promise.all([
     prisma.case.findUniqueOrThrow({ where: { code: e.caseCode } }),
     prisma.contactAttempt.findMany({ where: { entitlementId: id }, orderBy: { createdAt: "asc" } }),
     prisma.refund.findMany({ where: { entitlementId: id }, orderBy: { createdAt: "asc" } }),
@@ -30,6 +33,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
     e.stage === "hold" ? prisma.entitlement.findUnique({ where: { lineId_month: { lineId: e.lineId, month: addMonths(e.month, -1) } } }) : null,
     userNames(),
     e.batchId ? prisma.paymentBatch.findUnique({ where: { id: e.batchId } }) : null,
+    prisma.attachment.findMany({ where: { entitlementId: id }, orderBy: { createdAt: "desc" } }),
   ]);
   const today = new Date().toISOString().slice(0, 10);
   const policyOpts = Object.entries(POLICY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>);
@@ -150,6 +154,30 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
           </ActionForm>
         </details>
       )}
+      {e.kind === "card" && e.sentAt && !["recv", "stop"].includes(e.stage) && can(u.role, "send") && (
+        <details className="box" style={{ marginTop: 14 }}><summary>إعادة إرسال الكارت{e.resendCount ? ` (أُعيد ${e.resendCount} مرة)` : ""}</summary>
+          <ActionForm action={resendCard} className="row">
+            <input type="hidden" name="entId" value={e.id} />
+            <label className="field"><span>السبب *</span><input name="reason" required placeholder="مثال: الكارت لم يُشحن" /></label>
+            <div className="auto"><Submit className="btn secondary">إعادة الإرسال</Submit></div>
+          </ActionForm>
+        </details>
+      )}
+      {e.transfer && can(u.role, "approve") && (
+        <details className="box" style={{ marginTop: 14 }}><summary>تصحيح بيانات التحويل (مشرف) — القيمة القديمة تُحفظ في سجل التدقيق</summary>
+          <ActionForm action={correctTransfer}>
+            <input type="hidden" name="entId" value={e.id} />
+            <div className="row" style={{ marginTop: 10 }}>
+              <label className="field"><span>المبلغ</span><input type="number" name="amount" defaultValue={Number(e.transfer.amount)} /></label>
+              <label className="field"><span>الطريقة</span><select name="method" defaultValue={e.transfer.method}>{[...new Set([...RECV_METHODS, e.transfer.method])].map((x) => <option key={x}>{x}</option>)}</select></label>
+              <label className="field"><span>التاريخ</span><input type="date" name="date" defaultValue={isoDate(e.transfer.date)} /></label>
+              <label className="field"><span>المرجع</span><input name="ref" defaultValue={e.transfer.ref} dir="ltr" /></label>
+            </div>
+            <label className="field"><span>سبب التصحيح *</span><input name="reason" required /></label>
+            <div><Submit className="btn secondary">حفظ التصحيح</Submit></div>
+          </ActionForm>
+        </details>
+      )}
       {!["recv", "deliv", "stop"].includes(e.stage) && can(u.role, "follow") && (
         <details className="box" style={{ marginTop: 14 }}><summary>{e.stuckReason ? "إلغاء التعثر" : "تسجيل تعثر"}</summary>
           <ActionForm action={setStuck}>
@@ -172,6 +200,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
             <ul className="timeline">{tasks.map((t) => <li key={t.id}><Link href={`/tasks/${t.id}`}>{t.title}</Link> · {names.name(t.assigneeId)} · {t.status === "done" ? `نفّذها ${names.name(t.completedById)}` : TASK_STATUS_LABELS[t.status]}</li>)}</ul></>}
         </div>
       </div>
+    <div style={{ marginTop: 14 }}><Attachments items={files} names={names} caseCode={e.caseCode} entitlementId={e.id} canAdd={can(u.role, "case")} /></div>
     </>
   );
 }

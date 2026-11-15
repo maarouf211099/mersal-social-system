@@ -15,7 +15,7 @@ import { MonthSelect, SelectAll } from "@/components/client";
 import { ActionForm, Submit } from "@/components/forms";
 import { Steps } from "@/components/Steps";
 
-const KINDS = [{ key: "financial", label: "مالي" }, { key: "card", label: "كارت" }, { key: "in_kind", label: "عيني" }];
+const KINDS = [{ key: "financial", label: "مالي" }, { key: "card", label: "كارت" }, { key: "in_kind", label: "عيني" }, { key: "service", label: "خدمات (سكن، علاج، متابعة)" }];
 
 export default async function CyclePage({ searchParams }: { searchParams: SP }) {
   const u = await requirePageUser();
@@ -52,7 +52,7 @@ export default async function CyclePage({ searchParams }: { searchParams: SP }) 
           <div className="toolbar" style={{ marginBottom: 6 }}>
             <span className="muted">{fmtMonth(m)} · {list.length} استحقاق · الإجمالي {money(list.reduce((s, e) => s + e.amountN, 0))} جنيه</span>
             <span className="spacer" />
-            {can(u.role, "send") && <Submit className="btn primary" name="op" value="send" disabled={!sendable}>{kind === "in_kind" ? "تم التسليم للمحدد" : kind === "card" ? "تم إرسال الكارت للمحدد" : "إرسال المحدد ضمن دفعة"}</Submit>}
+            {can(u.role, "send") && <Submit className="btn primary" name="op" value="send" disabled={!sendable}>{kind === "in_kind" ? "تم التسليم للمحدد" : kind === "card" ? "تم إرسال الكارت للمحدد" : kind === "service" ? "تم التنفيذ للمحدد" : "إرسال المحدد ضمن دفعة"}</Submit>}
           </div>
           {kind === "financial" && can(u.role, "transfer") && transferable > 0 && (
             <details className="box" style={{ marginBottom: 12 }}>
@@ -72,7 +72,7 @@ export default async function CyclePage({ searchParams }: { searchParams: SP }) 
               <tr key={e.id}>
                 <td><input type="checkbox" name="ids" value={e.id} aria-label="تحديد" /></td>
                 <td><CaseLink code={e.caseCode} name={e.case.name} /></td>
-                <td>{e.serviceName}</td>
+                <td>{e.serviceName}{e.resendCount > 0 && <span className="cell-sub">أُعيد الإرسال ×{e.resendCount}</span>}</td>
                 <td className="nowrap">{money(e.amountN)}{Number(e.carriedAmount) > 0 && <span className="cell-sub">+{money(e.carriedAmount)} مرحّل</span>}</td>
                 <td><Link href={`/cycle/${e.id}`}><StageBadge stage={e.stage} kind={e.kind} /></Link><Steps e={e} /></td>
                 <td className="nowrap">{e.sentAt ? <>{fmtTs(e.sentAt)}<span className="cell-sub">{names.name(e.sentById)}</span></> : "—"}</td>

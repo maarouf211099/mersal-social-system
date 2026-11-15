@@ -6,6 +6,7 @@ import { AUTO_OPS, TASK_STATUS_LABELS } from "@/lib/constants";
 import { logAudit, logOp } from "@/lib/ops";
 import { getSettings } from "@/lib/settings";
 import { can } from "@/lib/perms";
+import { storeUpload } from "@/lib/files";
 
 export async function createTask(_p: State, f: FormData): Promise<State> {
   return run("task", async (u) => {
@@ -94,7 +95,8 @@ export async function createOperation(_p: State, f: FormData): Promise<State> {
     const date = dateOf(str(f, "date")) ?? new Date();
     const count = Math.max(1, Math.floor(num(f, "count") || 1));
     await prisma.$transaction(async (tx) => {
-      await tx.operation.create({ data: { type: t!.name, team: t!.team, weight: t!.weight, caseCode: t!.scope === "case" ? code : null, dept: t!.scope === "general" ? dept : "", date, status, result, notes: str(f, "notes"), attachment: str(f, "attachment"), count, auto: false, userId: u.id } });
+      const op = await tx.operation.create({ data: { type: t!.name, team: t!.team, weight: t!.weight, caseCode: t!.scope === "case" ? code : null, dept: t!.scope === "general" ? dept : "", date, status, result, notes: str(f, "notes"), attachment: str(f, "attachment"), count, auto: false, userId: u.id } });
+      await storeUpload(tx, f.get("file"), { caseCode: t!.scope === "case" ? code : null, operationId: op.id }, u.id);
       await logAudit(tx, u.id, "operation", t!.scope === "case" ? code : dept, { type: t!.name, count });
     });
     return "تم تسجيل العملية باسمك ووقت التسجيل.";

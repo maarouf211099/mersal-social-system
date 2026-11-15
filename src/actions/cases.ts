@@ -6,6 +6,7 @@ import { fail, run, str, type State } from "@/lib/action";
 import { AUTO_OPS } from "@/lib/constants";
 import { applyCaseChanges, readCaseFields } from "@/lib/case-changes";
 import { logAudit, logOp } from "@/lib/ops";
+import { dupText, findDuplicates } from "@/lib/duplicates";
 
 export async function createCase(_p: State, f: FormData): Promise<State> {
   let code = "";
@@ -19,6 +20,7 @@ export async function createCase(_p: State, f: FormData): Promise<State> {
       await tx.case.create({ data: { code, ...(data as any), createdById: u.id, updatedById: u.id } });
       await logAudit(tx, u.id, "case_created", code, { name: data.name });
     });
+    return `تم تسجيل الحالة.${dupText(await findDuplicates(code, data as any))}`;
   });
   if (r?.ok) redirect(`/cases/${encodeURIComponent(code)}`);
   return r;
@@ -37,7 +39,7 @@ export async function updateCase(_p: State, f: FormData): Promise<State> {
       }
       return n;
     });
-    return n ? `تم حفظ ${n} تعديل في سجل التعديلات.` : "لا توجد تعديلات.";
+    return (n ? `تم حفظ ${n} تعديل في سجل التعديلات.` : "لا توجد تعديلات.") + dupText(await findDuplicates(code, data as any));
   });
   if (r?.ok) redirect(`/cases/${encodeURIComponent(code)}?saved=1`);
   return r;

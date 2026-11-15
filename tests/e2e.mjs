@@ -155,6 +155,55 @@ ok(csv.status() === 200 && (await csv.text()).includes("5001"), "تصدير CSV"
 await go("/audit"); ok(await p.locator("td", { hasText: "تسجيل تحويل" }).count() > 0, "سجل التدقيق");
 if (SHOTS) { await go(`/?m=${month}`); await p.screenshot({ path: `${SHOTS}/dashboard.png`, fullPage: true }); await go(`/cycle?m=${next}`); await p.screenshot({ path: `${SHOTS}/cycle.png` }); }
 
+// ── الإضافات: عدم الرد لشهرين، تصحيح التحويل، المرفقات، الخدمات غير الشهرية، إعادة إرسال الكارت
+const nextEnt = await (async () => { await go(`/cycle?m=${next}`); return p.locator("a[href^='/cycle/c']").first().getAttribute("href"); })();
+await p.locator('input[name="ids"]').first().check();
+await submit("إرسال المحدد ضمن دفعة");
+await go(nextEnt);
+await p.getByLabel("طريقة التحويل *").selectOption("محفظة إلكترونية"); await p.getByLabel("رقم المرجع *").fill("TRX-778");
+await submit("حفظ التحويل");
+for (let i = 1; i <= 3; i++) { await go(nextEnt); await submit("لم يرد"); }
+await go("/renewal?view=noreply");
+ok(await p.locator("td", { hasText: "5001" }).count() > 0, "قائمة عدم الرد لشهرين متتاليين");
+await p.goto(entUrl, { waitUntil: "networkidle" });
+await p.locator("summary", { hasText: "تصحيح بيانات التحويل" }).click();
+await p.locator('details[open] input[name="ref"]').fill("TRX-777-A");
+await p.locator('details[open] input[name="reason"]').fill("خطأ في رقم المرجع");
+ok((await submit("حفظ التصحيح")).includes("تم تصحيح التحويل"), "تصحيح التحويل (مشرف) مع حفظ القديم");
+await go("/cases/5001");
+const pdf = { name: "receipt.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n%test\n") };
+await p.locator('input[type="file"][name="file"]').setInputFiles(pdf);
+await p.locator('input[name="note"]').last().fill("إيصال استلام");
+ok((await submit("رفع")).includes("تم رفع المرفق"), "رفع مرفق على ملف الحالة");
+const href = await p.locator("a[href^='/api/files/']").first().getAttribute("href");
+ok((await p.request.get(BASE + href)).status() === 200, "فتح المرفق");
+ok((await (await ctx.browser().newContext()).request.get(BASE + href)).status() === 401, "المرفق لا يفتح بدون دخول");
+// خدمة سكن (تغطية) + كارت لنفس الحالة المؤكدة
+await go("/decisions/new?code=5001");
+await p.getByLabel("تاريخ القرار").fill(prevDay5);
+const svcVal = async (name) => p.locator('select[name="svc"] option', { hasText: name }).first().getAttribute("value");
+await p.locator('select[name="svc"]').selectOption(await svcVal("سكن / دار رعاية"));
+await p.locator('input[name="amount"]').fill("2500"); await p.locator('input[name="months"]').fill("3");
+await p.getByRole("button", { name: "+ إضافة خدمة" }).click();
+await p.locator('select[name="svc"]').nth(1).selectOption(await svcVal("كارت كازيون"));
+await p.locator('input[name="amount"]').nth(1).fill("600"); await p.locator('input[name="months"]').nth(1).fill("3");
+await p.getByRole("button", { name: "حفظ القرار" }).click(); await p.waitForURL(/cases\/5001\?saved/);
+await go(`/cycle?m=${month}`);
+await p.getByRole("button", { name: /^توليد استحقاقات/ }).click(); await p.waitForSelector(".alert.ok");
+await go(`/cycle?m=${month}&kind=service`);
+await p.locator('input[name="ids"]').first().check();
+await submit("تم التنفيذ للمحدد");
+await go(`/cycle?m=${month}&kind=service`);
+ok(await p.locator("text=تم التنفيذ").count() > 0, "تنفيذ خدمة غير شهرية (سكن) وتسجيلها");
+await go(`/cycle?m=${month}&kind=card`);
+await p.locator('input[name="ids"]').first().check();
+await submit("تم إرسال الكارت للمحدد");
+await go(`/cycle?m=${month}&kind=card`);
+await p.locator("a[href^='/cycle/c']").first().click(); await p.waitForURL(/\/cycle\/c/); await p.waitForLoadState("networkidle");
+await p.locator("summary", { hasText: "إعادة إرسال الكارت" }).click();
+await p.locator('details[open] input[name="reason"]').fill("الكارت لم يُشحن");
+ok((await submit("إعادة الإرسال")).includes("تمت إعادة إرسال الكارت"), "إعادة إرسال الكارت");
+
 // ── موظف بدور «موظف» لا يقدر يسجل تحويل ولا يفتح الإدارة
 await go("/admin/users");
 await p.getByLabel("الاسم").fill("موظف اختبار");

@@ -66,6 +66,7 @@ model Case {
   entitlements Entitlement[]
   changes      CaseChange[]
   operations   Operation[]
+  attachments  Attachment[]
 
   @@index([name])
   @@index([phone])
@@ -241,7 +242,8 @@ model Entitlement {
   settledById String?
   settledNote String     @default("")
 
-  legacySent Boolean  @default(false) // مستورد من النظام السابق كـ«تم الإرسال» بدون بيانات تحويل
+  legacySent  Boolean  @default(false) // مستورد من النظام السابق كـ«تم الإرسال» بدون بيانات تحويل
+  resendCount Int      @default(0) // إعادة إرسال الكارت
   createdAt  DateTime @default(now())
   createdById String?
 
@@ -252,6 +254,7 @@ model Entitlement {
   attempts  ContactAttempt[]
   refunds   Refund[]
   tasks     Task[]
+  attachments Attachment[]
 
   @@unique([lineId, month])
   @@index([month])
@@ -409,6 +412,7 @@ model Operation {
   returnedCount Int      @default(0)
   returnNote    String   @default("")
   case          Case?    @relation(fields: [caseCode], references: [code])
+  attachments   Attachment[]
 
   @@index([date])
   @@index([userId, date])
@@ -441,4 +445,26 @@ model AuditLog {
 model SsoJti {
   jti       String   @id
   createdAt DateTime @default(now())
+}
+
+// المرفقات والمستندات الداعمة — الملف نفسه على السيرفر (UPLOAD_DIR)، ولا يُحذف
+model Attachment {
+  id            String       @id @default(cuid())
+  caseCode      String?
+  operationId   String?
+  entitlementId String?
+  name          String // اسم الملف الأصلي
+  mime          String
+  size          Int
+  storedName    String       @unique
+  note          String       @default("")
+  userId        String
+  createdAt     DateTime     @default(now())
+  case          Case?        @relation(fields: [caseCode], references: [code])
+  operation     Operation?   @relation(fields: [operationId], references: [id])
+  entitlement   Entitlement? @relation(fields: [entitlementId], references: [id])
+
+  @@index([caseCode])
+  @@index([operationId])
+  @@index([entitlementId])
 }

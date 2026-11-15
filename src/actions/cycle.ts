@@ -11,6 +11,7 @@ import { addMonths, fmtMonth, isMonth } from "@/lib/months";
 import { getSettings } from "@/lib/settings";
 import { canFollow, canSend, followRequired, type Kind } from "@/lib/stage";
 import { money } from "@/lib/format";
+import { dupText, findDuplicates } from "@/lib/duplicates";
 
 type Tx = Prisma.TransactionClient;
 const due = (days: number) => addDays(new Date(), days);
@@ -52,10 +53,11 @@ export async function generateMonth(_p: State, f: FormData): Promise<State> {
     if (!isMonth(m)) fail("اختار الشهر.");
     const st = await getSettings();
     const lines = await prisma.decisionLine.findMany({
-      where: { decision: { status: "active" }, service: { kind: { not: "service" }, cycle: { not: "coverage" } }, startMonth: { lte: m }, endMonth: { gte: m } },
+      where: { decision: { status: "active" }, startMonth: { lte: m }, endMonth: { gte: m } },
       include: { service: true, decision: true },
     });
-    const eligible = lines.filter((l) => l.service.cycle === "monthly" || l.startMonth === m);
+    // الشهري والتغطية: استحقاق كل شهر · مرة واحدة: في شهر البداية فقط
+    const eligible = lines.filter((l) => l.service.cycle !== "once" || l.startMonth === m);
     const existing = new Set((await prisma.entitlement.findMany({ where: { month: m, lineId: { in: eligible.map((l) => l.id) } }, select: { lineId: true } })).map((e) => e.lineId));
     const todo = eligible.filter((l) => !existing.has(l.id));
     if (!todo.length) fail(`لا توجد استحقاقات جديدة لـ${fmtMonth(m)}. لا يُنشأ استحقاق بعد تاريخ نهاية القرار.`);
@@ -135,7 +137,8 @@ export async function confirmData(_p: State, f: FormData): Promise<State> {
       await logOp(tx, u.id, AUTO_OPS.confirm, { caseCode: e.caseCode, result: "تم الرد وتأكيد البيانات", notes: note, ref: id });
       await logAudit(tx, u.id, "data_confirmed", e.caseCode);
     });
-    return "تم تأكيد البيانات. الحالة جاهزة للإرسال.";
+    const c2 = await prisma.case.findUniqueOrThrow({ where: { code: e.caseCode } });
+    return `تم تأكيد البيانات. الحالة جاهزة للإرسال.${dupText(await findDuplicates(e.caseCode, c2))}`;
   });
 }
 
@@ -187,7 +190,7 @@ export async function sendBatch(_p: State, f: FormData): Promise<State> {
             await tx.task.create({ data: { kind: "follow", title: "مكالمة متابعة استلام", opType: AUTO_OPS.follow, caseCode: e.caseCode, entitlementId: e.id, assigneeId: st.assign.follow || null, dueAt: due(st.followDays), createdById: u.id } });
           }
         }
-        const label = kind === "in_kind" ? AUTO_OPS.sendInKind : kind === "card" ? AUTO_OPS.sendCard : AUTO_OPS.send;
+        const label = kind === "in_kind" ? AUTO_OPS.sendInKind : kind === "card" ? AUTO_OPS.sendCard : kind === "service" ? AUTO_OPS.serviceDone : AUTO_OPS.send;
         await logOp(tx, u.id, label, { dept: `دفعة ${code}`, result: `${list.length} حالة · ${money(total)} ج`, count: list.length, ref: code });
         await logAudit(tx, u.id, "batch_sent", code, { count: list.length, total, kind });
       }
@@ -353,4 +356,27 @@ export async function cycleBulk(p: State, f: FormData): Promise<State> {
   if (op === "send") return sendBatch(p, f);
   if (op === "transfer") { f.set("bulk", "1"); return recordTransfer(p, f); }
   return { error: "اختار الإجراء." };
+}
+
+/** إعادة إرسال الكارت (من النظام السابق): المتابعة تبدأ من جديد، والمحاولات القديمة تفضل في السجل */
+export async function resendCard(_p: State, f: FormData): Promise<State> {
+  return run("send", async (u) => {
+    const st = await getSettings();
+    const id = str(f, "entId"), reason = str(f, "reason");
+    if (!reason) fail("اكتب سبب إعادة الإرسال.");
+    const e = await loadEnt(id, st.followDays);
+    if (!e || e.kind !== "card" || !e.sentAt) fail("إعادة الإرسال متاحة للكروت المُرسلة فقط.");
+    if (e!.stage === "recv" || e!.stage === "stop") fail("لا يمكن إعادة الإرسال في هذه المرحلة.");
+    await prisma.$transaction(async (tx) => {
+      await tx.contactAttempt.updateMany({ where: { entitlementId: id, kind: "follow" }, data: { voided: true } });
+      await tx.entitlement.update({ where: { id }, data: { sentAt: new Date(), sentById: u.id, resendCount: { increment: 1 }, followResult: "none", followAt: null, followById: null, notPaidReason: "", notPaidAction: "", stuckReason: "" } });
+      await tx.task.updateMany({ where: { kind: "action", entitlementId: id, status: { in: ["new", "in_progress"] } }, data: { status: "cancelled", result: "أُلغيت: إعادة إرسال الكارت" } });
+      const t = await tx.task.findUnique({ where: { kind_entitlementId: { kind: "follow", entitlementId: id } } });
+      if (t) await tx.task.update({ where: { id: t.id }, data: { status: "new", completedAt: null, completedById: null, dueAt: due(st.followDays), result: "" } });
+      else await tx.task.create({ data: { kind: "follow", title: "مكالمة متابعة استلام", opType: AUTO_OPS.follow, caseCode: e!.caseCode, entitlementId: id, assigneeId: st.assign.follow || null, dueAt: due(st.followDays), createdById: u.id } });
+      await logOp(tx, u.id, AUTO_OPS.resendCard, { caseCode: e!.caseCode, result: reason, ref: id });
+      await logAudit(tx, u.id, "card_resent", e!.caseCode, { month: e!.month, reason, count: e!.resendCount + 1 });
+    });
+    return "تمت إعادة إرسال الكارت. المتابعة بدأت من جديد.";
+  });
 }

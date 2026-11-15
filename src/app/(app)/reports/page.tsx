@@ -9,7 +9,7 @@ import { addMonths, fmtMonth, MONTH_NAMES } from "@/lib/months";
 import { fmtDate, fmtDur, fmtTs, money, pct } from "@/lib/format";
 import { monthOf, monthOpts, one, qs, type SP } from "@/lib/page";
 import { Badge, CaseLink, Kpi, PageHead, Seg, StageBadge, Table, Trend } from "@/components/ui";
-import { AutoSubmitSelect, MonthSelect } from "@/components/client";
+import { AutoSubmitSelect, MonthSelect, PrintButton } from "@/components/client";
 import { StaffTable } from "@/components/StaffTable";
 import { Icon } from "@/components/icons";
 
@@ -30,6 +30,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: SP }
       <PageHead title="التقارير" sub={`${desc} · أُنشئ ${fmtTs(new Date())} بواسطة ${u.name}`}>
         <MonthSelect value={m} options={monthOpts(m)} />
         <Link className="btn secondary" href={`/api/export/${exportKind}${qs(params)}`}><Icon.download /> تصدير CSV</Link>
+        <PrintButton />
       </PageHead>
       <div className="toolbar"><Seg current={view} items={VIEWS.map((v) => ({ ...v, href: `/reports${qs({ ...params, view: v.key })}` }))} /></div>
       <form className="toolbar no-print">

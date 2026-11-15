@@ -13,6 +13,7 @@ import { Kpi, PageHead, StageBadge, Table, Trend } from "@/components/ui";
 import { MonthSelect } from "@/components/client";
 import { StaffTable } from "@/components/StaffTable";
 import { Icon } from "@/components/icons";
+import { noReplyDecisionIds } from "@/lib/noreply";
 
 export default async function Dashboard({ searchParams }: { searchParams: SP }) {
   const u = await requirePageUser();
@@ -35,6 +36,8 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   if (M.lateNow) alerts.push(["bad", `${M.lateNow} مهمة متأخرة عن موعدها`, "/tasks?view=late"]);
   if (soon) alerts.push(["warn", `${soon} قرار ينتهي خلال ${st.renewLead} شهر ولم يُرسل للتجديد`, "/renewal"]);
   if (ended) alerts.push(["bad", `${ended} قرار انتهت مدته وينتظر الإغلاق`, "/renewal?view=ended"]);
+  const noReply = (await noReplyDecisionIds()).size;
+  if (noReply) alerts.push(["bad", `${noReply} قرار عليه عدم رد لشهرين متتاليين`, "/renewal?view=noreply"]);
   if (pendingRef) alerts.push(["warn", `${pendingRef} استرداد لم تتم تسويته`, "/refunds?all=1&settle=pending"]);
   const tm = trendM.map((x) => ({ m: x.m, label: MONTH_NAMES[Number(x.m.slice(5)) - 1] }));
   return (

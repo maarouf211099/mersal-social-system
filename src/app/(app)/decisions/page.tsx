@@ -50,7 +50,7 @@ export default async function DecisionsPage({ searchParams }: { searchParams: SP
             const left = end ? toIdx(end) - toIdx(cm) + 1 : 0;
             return (
               <tr key={d.id}>
-                <td className="nowrap">{d.no}<span className="cell-sub">{d.renewOfId ? "مجدد" : "جديد"}</span></td>
+                <td className="nowrap"><Link className="strong" href={`/decisions/${d.id}`}>{d.no}</Link><span className="cell-sub">{d.renewOfId ? "مجدد" : "جديد"}</span></td>
                 <td><CaseLink code={d.caseCode} name={d.case.name} /></td>
                 <td className="nowrap">{fmtDate(d.issueDate)}<span className="cell-sub">{names.name(d.createdById)}</span></td>
                 <td>{d.lines.map((l) => <span key={l.id} className="cell-sub" style={{ color: "var(--text-2)" }}>{l.service.name} · {money(l.amount)} ج · {fmtMonth(l.startMonth)} ← {fmtMonth(l.endMonth)}</span>)}</td>

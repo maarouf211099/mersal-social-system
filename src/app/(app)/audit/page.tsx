@@ -15,6 +15,7 @@ const LABELS: Record<string, string> = {
   refund: "استرداد", refund_settled: "تسوية استرداد", line_extended: "تمديد خدمة", action_done: "معالجة عدم صرف", renewal_sent: "إرسال للتجديد", renewal_not_renewed: "لم يُجدد",
   task_created: "مهمة جديدة", task_status: "تحديث مهمة", tasks_assigned: "إسناد مهام", task_returned: "إرجاع مهمة للتصحيح", operation: "تسجيل عملية",
   operation_status: "تحديث عملية", operation_returned: "إرجاع عملية", user_created: "إضافة مستخدم", user_updated: "تعديل مستخدم", settings_updated: "تعديل الإعدادات",
+  line_corrected: "تصحيح خدمة في قرار", decision_corrected: "تصحيح بيانات قرار", transfer_corrected: "تصحيح تحويل", card_resent: "إعادة إرسال كارت", attachment_added: "رفع مرفق",
   service_created: "إضافة خدمة", service_updated: "تعديل خدمة", optype_saved: "نوع عملية", export: "تصدير", import_v1: "استيراد النظام السابق",
 };
 

@@ -32,6 +32,8 @@ const appEnv = parseEnv(readFileSync(envFile, "utf8"));
 for (const k of ["DATABASE_URL", "AUTH_SECRET"]) if (!appEnv[k]) die(`${k} مش موجود في ${envFile}`);
 if (!/[?&]schema=social\b/.test(appEnv.DATABASE_URL)) die("DATABASE_URL لازم يكون فيه ?schema=social");
 appEnv.PORT ||= "3011";
+// المرفقات خارج فولدر النسخة عشان ماتضيعش مع التحديث
+appEnv.UPLOAD_DIR ||= path.join(deployDir, "uploads");
 appEnv.HOSTNAME ||= "0.0.0.0";
 appEnv.NODE_ENV = "production";
 const env = { ...process.env, ...appEnv, NEXT_TELEMETRY_DISABLED: "1" };

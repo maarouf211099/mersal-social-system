@@ -11,6 +11,8 @@ import { age, fmtDate, fmtTs, money } from "@/lib/format";
 import { currentMonth, fmtMonth } from "@/lib/months";
 import { Badge, Kpi, PageHead, StageBadge, Table } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { Attachments } from "@/components/Attachments";
+import { findDuplicates } from "@/lib/duplicates";
 
 export default async function CaseFilePage({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ saved?: string }> }) {
   const u = await requirePageUser();
@@ -19,13 +21,15 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
   const c = await prisma.case.findUnique({ where: { code } });
   if (!c) notFound();
   const st = await getSettings();
-  const [decs, ents, ops, changes, names] = await Promise.all([
+  const [decs, ents, ops, changes, names, files] = await Promise.all([
     prisma.decision.findMany({ where: { caseCode: code }, include: { lines: { include: { service: true } } }, orderBy: { issueDate: "desc" } }),
     loadEnts({ caseCode: code }, st.followDays, [{ month: "desc" }]),
     prisma.operation.findMany({ where: { caseCode: code }, orderBy: { createdAt: "desc" }, take: 100 }),
     prisma.caseChange.findMany({ where: { caseCode: code }, orderBy: { createdAt: "desc" } }),
     userNames(),
+    prisma.attachment.findMany({ where: { OR: [{ caseCode: code }, { entitlement: { caseCode: code } }, { operation: { caseCode: code } }] }, orderBy: { createdAt: "desc" } }),
   ]);
+  const dups = await findDuplicates(code, c);
   const totalTr = ents.reduce((s, e) => s + e.transferred, 0), totalRef = ents.reduce((s, e) => s + e.refundTotal, 0);
   const cm = currentMonth();
   const decEnd = (d: (typeof decs)[number]) => d.lines.reduce((m, l) => (l.endMonth > m ? l.endMonth : m), "");
@@ -39,6 +43,7 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
         {can(u.role, "decision") && <Link className="btn primary" href={`/decisions/new?code=${encodeURIComponent(code)}`}><Icon.plus /> قرار</Link>}
       </PageHead>
       {saved && <div className="alert ok"><Icon.check />تم الحفظ.</div>}
+      {dups.length > 0 && <div className="alert warn"><Icon.alert /><span>بيانات مشتركة مع حالات أخرى (راجع احتمال التكرار): {dups.map((d, i) => <span key={i}>{i ? " · " : ""}{d.field}: {d.codes.map((x, j) => <span key={x}>{j ? "، " : ""}<a className="strong" href={`/cases/${encodeURIComponent(x)}`}>{x}</a></span>)}</span>)}</span></div>}
       <div className="card">
         <div className="kv">
           {kv("الجنسية", c.nationality)}{kv("النوع", c.gender)}{kv("الميلاد", c.birthDate ? `${fmtDate(c.birthDate)} (${age(c.birthDate)} سنة)` : "")}{kv("عدد الأفراد", c.familySize)}
@@ -62,7 +67,7 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
         <Table heads={["رقم", "تاريخ القرار", "الخدمات", "الحالة", "التجديد", ""]} empty="لا توجد قرارات.">
           {decs.map((d) => (
             <tr key={d.id}>
-              <td className="nowrap">{d.no}<span className="cell-sub">{d.renewOfId ? "مجدد" : "جديد"}</span></td>
+              <td className="nowrap"><Link className="strong" href={`/decisions/${d.id}`}>{d.no}</Link><span className="cell-sub">{d.renewOfId ? "مجدد" : "جديد"}</span></td>
               <td>{fmtDate(d.issueDate)}<span className="cell-sub">{names.name(d.createdById)}</span></td>
               <td>{d.lines.map((l) => <div key={l.id} className="cell-sub" style={{ color: "var(--text-2)" }}>{l.service.name} · {money(l.amount)} ج · {fmtMonth(l.startMonth)} ← {fmtMonth(l.endMonth)}{l.extendedBy ? ` (مُدد ${l.extendedBy})` : ""}</div>)}</td>
               <td><Badge tone={status(d) === "active" ? "ok" : status(d) === "ended" ? "" : "bad"}>{DEC_STATUS_LABELS[status(d)]}</Badge>{d.stopReason && <span className="cell-sub">{d.stopReason}</span>}</td>
@@ -109,6 +114,7 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
           ) : <p className="muted">لم تُعدّل البيانات منذ التسجيل.</p>}
         </div>
       </div>
+      <div style={{ marginTop: 14 }}><Attachments items={files} names={names} caseCode={code} canAdd={can(u.role, "case")} /></div>
     </>
   );
 }

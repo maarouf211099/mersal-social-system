@@ -41,11 +41,19 @@ cd mersal-social-system && git pull && set DEPLOY_DIR=D:\apis\mersal-social && n
 اختبار بعد الربط (نفس اختبارات البوابة): الدخول من البوابة يفتح على طول · فتح رابط التذكرة مرة تانية يرجع `?sso=invalid` · موظف مالوش حساب يرجع `?sso=nouser` · `/api/portal/summary` من غير توكن يرجع 401.
 
 ## النسخ الاحتياطي
-القاعدة PostgreSQL عادية — ضيفها لنفس جدول النسخ الاحتياطي بتاع باقي الأنظمة:
 ```
-pg_dump -Fc -n social -d mersal_social -f mersal_social_%DATE%.dump
+set DEPLOY_DIR=D:\apis\mersal-social && node scripts/backup.mjs
 ```
-وأي تقرير أو قائمة تتصدر CSV من الشاشات بدون ما تأثر على القاعدة.
+بياخد نسخة من القاعدة (pg_dump) والمرفقات في `D:\apis\mersal-social\backups`، ويحتفظ بآخر 30 نسخة. لو `pg_dump` مش في الـPATH: `set PG_BIN=C:\Program Files\PostgreSQL\16\bin`.
+
+جدولته يومياً (CMD كمسؤول):
+```
+schtasks /create /tn "mersal-social-backup" /sc daily /st 23:30 /tr "cmd /c cd /d D:\path\mersal-social-system && set DEPLOY_DIR=D:\apis\mersal-social && node scripts/backup.mjs"
+```
+انسخ فولدر `backups` لمكان تاني (درايف خارجي أو سيرفر تاني) بشكل دوري.
+
+## المرفقات
+بتتحفظ في `D:\apis\mersal-social\uploads` (خارج فولدر النسخ، فمابتضيعش مع التحديث). لتغيير المكان: `UPLOAD_DIR=...` في `.env`.
 
 ## نقل البيانات من النظام السابق (صفحة HTML)
 من النظام السابق: الإعدادات ← تصدير نسخة كاملة (JSON). وفي النظام الجديد: الإدارة ← استيراد البيانات. بيشتغل مرة واحدة على قاعدة فاضية، في عملية واحدة (يا ينجح كله يا مايتحفظش حاجة).

@@ -6,7 +6,7 @@ export function Badge({ tone = "", children, plain }: { tone?: string; children:
 }
 export function StageBadge({ stage, kind }: { stage: Stage; kind?: string }) {
   const s = STAGES[stage];
-  const label = stage === "recv" && kind === "in_kind" ? "تم الاستلام" : s.label;
+  const label = stage === "recv" && kind === "in_kind" ? "تم الاستلام" : stage === "deliv" && kind === "service" ? "تم التنفيذ" : s.label;
   return <Badge tone={s.tone}>{label}</Badge>;
 }
 export function Kpi({ v, l, tone = "", s, href, sTone }: { v: React.ReactNode; l: string; tone?: string; s?: React.ReactNode; href?: string; sTone?: string }) {

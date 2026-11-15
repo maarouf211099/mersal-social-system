@@ -12,6 +12,7 @@ import { Badge, CaseLink, PageHead, Table } from "@/components/ui";
 import { AutoSubmitSelect, MonthSelect } from "@/components/client";
 import { ActionForm, Submit } from "@/components/forms";
 import { Icon } from "@/components/icons";
+import { ACCEPT } from "@/lib/files";
 
 export default async function OpsPage({ searchParams }: { searchParams: SP }) {
   const u = await requirePageUser();
@@ -24,7 +25,7 @@ export default async function OpsPage({ searchParams }: { searchParams: SP }) {
     ...(q ? { OR: [{ type: { contains: q } }, { caseCode: { contains: q } }, { dept: { contains: q } }, { result: { contains: q } }] } : {}),
   };
   const [rows, total, types, names] = await Promise.all([
-    prisma.operation.findMany({ where, orderBy: { createdAt: "desc" }, take: 500, include: { case: { select: { name: true } } } }),
+    prisma.operation.findMany({ where, orderBy: { createdAt: "desc" }, take: 500, include: { case: { select: { name: true } }, attachments: { select: { id: true, name: true } } } }),
     prisma.operation.aggregate({ where, _sum: { count: true } }),
     prisma.opType.findMany({ where: { isActive: true, auto: false }, orderBy: { sort: "asc" } }),
     userNames(),
@@ -51,7 +52,8 @@ export default async function OpsPage({ searchParams }: { searchParams: SP }) {
               <label className="field"><span>حالة التنفيذ</span><select name="status" defaultValue="done"><option value="done">تم</option><option value="in_progress">جاري</option><option value="new">جديد</option></select></label>
               <label className="field"><span>النتيجة</span><input name="result" placeholder="مثال: تم الرد وتأكيد العنوان" /></label>
               <label className="field"><span>عدد المرات</span><input type="number" name="count" min={1} defaultValue={1} /></label>
-              <label className="field"><span>مرفق / رابط مستند</span><input name="attachment" dir="ltr" /></label>
+              <label className="field"><span>رابط / رقم مستند</span><input name="attachment" dir="ltr" /></label>
+              <label className="field"><span>مرفق (ملف)</span><input type="file" name="file" accept={ACCEPT} /></label>
             </div>
             <label className="field"><span>ملاحظات</span><textarea name="notes" /></label>
             <div className="inline"><Submit>حفظ العملية</Submit><span className="muted">يُسجَّل اسمك وتاريخ ووقت التسجيل تلقائياً.</span></div>
@@ -71,7 +73,7 @@ export default async function OpsPage({ searchParams }: { searchParams: SP }) {
           {rows.map((o) => (
             <tr key={o.id}>
               <td className="nowrap">{fmtDate(o.date)}</td>
-              <td>{o.type} {o.auto && <Badge plain>تلقائية</Badge>}{o.result && <span className="cell-sub" style={{ color: "var(--text-2)" }}>{o.result}</span>}{o.notes && <span className="cell-sub">{o.notes}</span>}{o.attachment && <span className="cell-sub">{/^https?:\/\//.test(o.attachment) ? <a href={o.attachment} target="_blank" rel="noopener noreferrer" className="num">{o.attachment}</a> : <span className="num">{o.attachment}</span>}</span>}{o.returnNote && <span className="cell-sub" style={{ color: "var(--warn)" }}>أُرجعت: {o.returnNote}</span>}</td>
+              <td>{o.type} {o.auto && <Badge plain>تلقائية</Badge>}{o.result && <span className="cell-sub" style={{ color: "var(--text-2)" }}>{o.result}</span>}{o.notes && <span className="cell-sub">{o.notes}</span>}{o.attachment && <span className="cell-sub">{/^https?:\/\//.test(o.attachment) ? <a href={o.attachment} target="_blank" rel="noopener noreferrer" className="num">{o.attachment}</a> : <span className="num">{o.attachment}</span>}</span>}{o.attachments.map((a) => <span key={a.id} className="cell-sub"><a href={`/api/files/${a.id}`} target="_blank" rel="noopener noreferrer">مرفق: {a.name}</a></span>)}{o.returnNote && <span className="cell-sub" style={{ color: "var(--warn)" }}>أُرجعت: {o.returnNote}</span>}</td>
               <td>{o.caseCode ? <CaseLink code={o.caseCode} name={o.case?.name} /> : o.dept || "—"}</td>
               <td>{names.name(o.userId)}</td>
               <td className="nowrap">{fmtTs(o.createdAt)}</td>

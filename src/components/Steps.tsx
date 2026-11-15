@@ -5,7 +5,7 @@ import { followRequired } from "@/lib/stage";
 export function Steps({ e }: { e: Ent }) {
   const steps: [string, boolean][] = [];
   if (e.needsConfirm) steps.push(["تأكيد", !!e.confirmedAt]);
-  steps.push([e.kind === "in_kind" ? "تسليم" : "إرسال", !!e.sentAt || e.legacySent]);
+  steps.push([e.kind === "in_kind" ? "تسليم" : e.kind === "service" ? "تنفيذ" : "إرسال", !!e.sentAt || e.legacySent]);
   if (e.kind === "financial") steps.push(["تحويل", !!e.transfer || e.legacySent]);
   if (followRequired(e.kind, e.line.service.needsFollow)) steps.push(["متابعة", e.followDone]);
   const bad = ["noans", "notpaid", "stuck", "refund"].includes(e.stage);

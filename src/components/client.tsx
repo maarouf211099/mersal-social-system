@@ -25,3 +25,7 @@ export function SelectAll({ name, label = "تحديد الكل" }: { name: strin
 export function AutoSubmitSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return <select {...props} onChange={(e) => e.currentTarget.form?.requestSubmit()} />;
 }
+
+export function PrintButton() {
+  return <button type="button" className="btn secondary no-print" onClick={() => window.print()}>طباعة</button>;
+}
