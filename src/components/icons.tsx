@@ -70,7 +70,6 @@ export function Logo({ height = 44, onDark = false, className }: { height?: numb
   if (onDark) return <img src="/logo-white.png" width={w} height={height} alt="مرسال" className={className} decoding="async" />;
   return (
     <picture className={className}>
-      <source srcSet="/logo-white.png" media="(prefers-color-scheme: dark)" />
       <img src="/logo.png" width={w} height={height} alt="مرسال" decoding="async" />
     </picture>
   );
