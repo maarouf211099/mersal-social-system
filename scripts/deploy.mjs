@@ -40,6 +40,8 @@ const env = { ...process.env, ...appEnv, NEXT_TELEMETRY_DISABLED: "1" };
 
 if (spawnSync("pm2", ["-v"], { shell: isWin, encoding: "utf8" }).status !== 0) die("pm2 مش متسطب: npm install -g pm2");
 
+// مكتبة قاعدة البيانات لازم تتجهز الأول (في فولدر جديد زي فولدر الـ runner ما بتكونش جاهزة بعد npm ci)
+if (!run("npx", ["prisma", "generate"], env)) die("فشل prisma generate — النسخة الشغالة زي ما هي");
 if (!run("npx", ["prisma", "migrate", "deploy"], env)) die("فشل تطبيق الـ migrations — النسخة الشغالة زي ما هي");
 if (!run("node", ["scripts/seed.mjs"], env)) die("فشل الـ seed — النسخة الشغالة زي ما هي");
 if (!run("npm", ["run", "build"], env)) die("فشل البناء — النسخة الشغالة زي ما هي");
