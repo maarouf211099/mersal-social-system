@@ -68,7 +68,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
       <div className="kpis">
         <Kpi v={M.activeCases} l="حالات نشطة" />
         <Kpi v={M.newDecs} l="قرارات جديدة" />
-        <Kpi v={M.endingDecs} l="قرارات تنتهي هذا الشهر" />
+        <Kpi v={M.endingDecs} l="قرارات تنتهي هذا الشهر" href={`/renewal?view=ending&m=${m}`} s="اضغط للعرض والإغلاق" />
         <Kpi v={M.stoppedTotal} l="قرارات متوقفة" s={`${M.stoppedDecs} هذا الشهر`} />
         <Kpi v={M.referred} l="محالة للتجديد / إعادة البحث" href="/renewal?view=sent" />
         <Kpi v={M.beneficiaries} l="حالات استلمت الخدمة" tone="ok" />

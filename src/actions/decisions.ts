@@ -95,7 +95,10 @@ export async function stopDecisions(_p: State, f: FormData): Promise<State> {
         const d = await tx.decision.findUniqueOrThrow({ where: { id } });
         if (d.status !== "active") continue;
         await tx.decision.update({ where: { id }, data: { status, stopReason: reason, stoppedAt: new Date(), stoppedById: u.id } });
-        const ents = await tx.entitlement.findMany({ where: { decisionId: id, sentAt: null, legacySent: false, stoppedAt: null, month: { gte: cm } }, select: { id: true } });
+        // الإغلاق كمنتهي: استحقاقات الشهور اللي جوه مدة القرار (زي الشهر الأخير) تفضل وتتصرف عادي
+        const lastMonth = status === "ended" ? (await tx.decisionLine.aggregate({ where: { decisionId: id }, _max: { endMonth: true } }))._max.endMonth ?? "" : "";
+        const month = status === "ended" && lastMonth >= cm ? { gt: lastMonth } : { gte: cm };
+        const ents = await tx.entitlement.findMany({ where: { decisionId: id, sentAt: null, legacySent: false, stoppedAt: null, month }, select: { id: true } });
         if (ents.length) {
           await tx.entitlement.updateMany({ where: { id: { in: ents.map((e) => e.id) } }, data: { stoppedAt: new Date(), stoppedReason: reason } });
           await tx.task.updateMany({ where: { entitlementId: { in: ents.map((e) => e.id) }, status: { in: ["new", "in_progress", "stuck"] } }, data: { status: "cancelled", result: `أُلغيت: ${reason}` } });
@@ -132,4 +135,16 @@ export async function markNotRenewed(_p: State, f: FormData): Promise<State> {
     await prisma.auditLog.create({ data: { userId: u.id, action: "renewal_not_renewed", target: d.caseCode, meta: { no: d.no } } });
     return "سُجل: لم يُجدد.";
   });
+}
+
+/** قائمة «تنتهي هذا الشهر»: إرسال للتجديد أو إغلاق كمنتهي أو إيقاف — لنفس التحديد */
+export async function endingBulk(p: State, f: FormData): Promise<State> {
+  const op = str(f, "op");
+  if (op === "renew") { if (!str(f, "note")) f.set("note", str(f, "reason")); return sendForRenewal(p, f); }
+  const fd = new FormData();
+  strs(f, "ids").forEach((id) => fd.append("ids", id));
+  if (op === "close") { fd.set("status", "ended"); fd.set("reason", str(f, "reason") || "انتهاء المدة"); }
+  else if (op === "stop") { fd.set("status", "stopped"); fd.set("reason", str(f, "reason")); }
+  else return { error: "اختار الإجراء." };
+  return stopDecisions(p, fd);
 }

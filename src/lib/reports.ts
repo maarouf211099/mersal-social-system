@@ -7,6 +7,7 @@ import { fmtMonth, addMonths, currentMonth } from "./months";
 import { fmtDate, fmtDur, fmtTs, pct } from "./format";
 import { userNames } from "./users";
 import { cycleList, cycleRow, CYCLE_HEADS, batchCodes } from "./cycle-list";
+import { casesSheet, readCaseFilter } from "./cases-list";
 
 const KIND_LABELS: Record<string, string> = { financial: "مالي", card: "كارت", in_kind: "عيني", service: "خدمات" };
 import { RENEWAL_LABELS, OP_STATUS_LABELS } from "./constants";
@@ -15,6 +16,11 @@ import { RENEWAL_LABELS, OP_STATUS_LABELS } from "./constants";
 export async function exportRows(kind: string, m: string, f: Filter, extra: Record<string, string>): Promise<{ name: string; rows: (string | number)[][]; title?: string }> {
   const st = await getSettings();
   const names = await userNames();
+  if (kind === "cases") {
+    const cf = readCaseFilter((k) => extra[k] ?? "");
+    const { rows, cases } = await casesSheet(cf);
+    return { name: `الحالات-والقرارات-${currentMonth()}`, title: `مؤسسة مرسال · الإدارة الاجتماعية — الحالات والقرارات · ${cases} حالة · ${rows.length - 1} صف (صف لكل خدمة في كل قرار)`, rows };
+  }
   if (kind === "cycle") {
     const kindKey = extra.kind || "financial";
     const batch = extra.batch ? await prisma.paymentBatch.findUnique({ where: { id: extra.batch } }) : null;
@@ -56,9 +62,9 @@ export async function exportRows(kind: string, m: string, f: Filter, extra: Reco
     const decs = await prisma.decision.findMany({ where: { status: "active" }, include: { case: true, lines: { include: { service: true } } } });
     const view = extra.view || "soon";
     const rows = decs.map((d) => ({ d, end: d.lines.reduce((a, l) => (l.endMonth > a ? l.endMonth : a), "") })).filter(({ d, end }) =>
-      view === "ended" ? end < cm : view === "sent" ? d.renewalStatus === "sent" : end >= m && end >= cm && end <= addMonths(m, st.renewLead));
-    return { name: `التجديد-${view}-${m}`, rows: [["رقم القرار", "الكود", "الاسم", "الهاتف", "المحافظة", "الخدمات", "آخر شهر", "موقف التجديد"],
-      ...rows.map(({ d, end }) => [d.no, d.caseCode, d.case.name, d.case.phone, d.case.governorate, d.lines.map((l) => l.service.name).join(" + "), fmtMonth(end), RENEWAL_LABELS[d.renewalStatus]])] };
+      view === "ending" ? end === m : view === "ended" ? end < cm : view === "sent" ? d.renewalStatus === "sent" : end >= m && end >= cm && end <= addMonths(m, st.renewLead));
+    return { name: `التجديد-${view}-${m}`, rows: [["رقم القرار", "الكود", "الاسم", "الهاتف", "المحافظة", "الخدمات", "نص القرار", "بداية القرار", "آخر شهر", "موقف التجديد"],
+      ...rows.map(({ d, end }) => [d.no, d.caseCode, d.case.name, d.case.phone, d.case.governorate, d.lines.map((l) => l.service.name).join(" + "), d.text, fmtMonth(d.lines.reduce((a, l) => (!a || l.startMonth < a ? l.startMonth : a), "")), fmtMonth(end), RENEWAL_LABELS[d.renewalStatus]])] };
   }
   throw new Error("نوع تصدير غير معروف");
 }

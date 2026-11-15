@@ -228,6 +228,14 @@ ok(await s.evaluate(() => document.documentElement.scrollWidth <= window.innerWi
 await go("/cases?q=5001");
 ok(await p.locator("table.grouped th", { hasText: "البداية" }).count() === 1 && await p.locator("table.grouped th", { hasText: "نص القرار" }).count() === 1, "الحالات: البداية والنهاية ونص القرار ظاهرين");
 ok(await p.locator(".tabs a", { hasText: "القرارات" }).count() === 1, "الحالات والقرارات بتابين");
+for (const fl of ["start", "end", "res", "recv"]) ok(await p.locator(`form.filters select[name="${fl}"]`).count() === 1, `فلتر الحالات: ${fl}`);
+await go(`/cases?end=${addM(month, 2)}`);
+ok(await p.locator("table.grouped tbody").count() > 0, "فلتر نهاية القرار بيرجع الحالة");
+const cx = await p.request.get(BASE + "/api/export/cases?format=xlsx");
+const cxb = await cx.body();
+ok(cx.status() === 200 && cxb[0] === 0x50 && cxb[1] === 0x4b, "تصدير Excel للحالات والقرارات بكل البيانات");
+await go(`/renewal?view=ending&m=${addM(month, 2)}`);
+ok(await p.locator("td", { hasText: "5001" }).count() > 0 && await p.getByRole("button", { name: "إغلاق المحدد كمنتهي" }).count() === 1, "قائمة القرارات اللي بتنتهي في الشهر");
 await go(`/cycle?m=${month}`);
 const heads = await p.locator(".card table th").allInnerTexts();
 ok(["الكود", "الاسم", "رقم الهاتف", "اسم المستلم", "الرقم القومي", "موقف الإقامة", "انتهاء الإقامة", "الخدمة", "التكلفة", "القرار", "بداية القرار", "نهاية القرار"].every((h) => heads.some((x) => x.trim() === h)), "دورة الصرف: كل الأعمدة المطلوبة");
