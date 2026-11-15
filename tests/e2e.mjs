@@ -16,7 +16,7 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 }, locale: "ar-EG", timezoneId: "Africa/Cairo" });
 const p = await ctx.newPage();
 const errors = [];
-p.on("pageerror", (e) => errors.push(e.message));
+p.on("pageerror", (e) => errors.push(`${e.message.slice(0, 60)} @ ${p.url().replace(BASE, "")}`));
 const go = (path) => p.goto(BASE + path, { waitUntil: "networkidle" });
 const alertText = async () => { await p.waitForSelector(".alert.ok, .alert.bad", { timeout: 15000 }); return (await p.locator(".alert.ok, .alert.bad").last().innerText()).trim(); };
 const fb = () => p.evaluate(() => [...document.querySelectorAll(".alert.ok, .alert.bad")].map((x) => x.textContent).join("|"));
@@ -25,6 +25,7 @@ const submit = async (text) => {
   const before = await fb();
   await p.getByRole("button", { name: text, exact: true }).first().click();
   await p.waitForFunction((b) => { const t = [...document.querySelectorAll(".alert.ok, .alert.bad")].map((x) => x.textContent).join("|"); return t && t !== b; }, before, { timeout: 20000 }).catch(() => {});
+  await p.waitForLoadState("networkidle"); // ما نسيبش الصفحة وتحديثها لسه شغال (يمنع أخطاء hydration وهمية)
   return alertText();
 };
 const month = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit" }).format(new Date()).slice(0, 7);
@@ -119,6 +120,7 @@ await p.locator("a[href^='/cycle/c']").first().click(); await p.waitForURL(/\/cy
 await p.getByLabel("معالجة الشهر غير المستلم").selectOption("carry");
 await p.getByLabel("سبب الاعتماد *").fill("تم التواصل وتأكيد الاستمرار");
 ok((await submit("اعتماد")).includes("تم الاعتماد"), "اعتماد الإدراج");
+await p.waitForFunction(() => document.querySelector(".kv")?.textContent?.includes("2,000"), null, { timeout: 10000 }).catch(() => {});
 ok((await p.locator(".kv").first().innerText()).includes("2,000"), "الترحيل: القيمة = الشهري + غير المستلم");
 
 // ── لا استحقاق بعد نهاية القرار
@@ -170,7 +172,7 @@ await p.locator("summary", { hasText: "تصحيح بيانات التحويل" }
 await p.locator('details[open] input[name="ref"]').fill("TRX-777-A");
 await p.locator('details[open] input[name="reason"]').fill("خطأ في رقم المرجع");
 ok((await submit("حفظ التصحيح")).includes("تم تصحيح التحويل"), "تصحيح التحويل (مشرف) مع حفظ القديم");
-await go("/cases/5001");
+await go("/cases/5001#files");
 const pdf = { name: "receipt.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n%test\n") };
 await p.locator('input[type="file"][name="file"]').setInputFiles(pdf);
 await p.locator('input[name="note"]').last().fill("إيصال استلام");
@@ -217,10 +219,27 @@ await s.goto(BASE + "/login"); await s.getByLabel("الإيميل").fill("staff.
 await s.getByRole("button", { name: "دخول" }).click(); await s.waitForURL(/account/); await s.waitForLoadState("networkidle");
 await s.getByLabel("كلمة المرور الحالية").fill(tmp); await s.getByLabel("الجديدة (10 حروف على الأقل)").fill("Staff-Strong-2026"); await s.getByLabel("تأكيد الجديدة").fill("Staff-Strong-2026");
 await s.getByRole("button", { name: "حفظ" }).click(); await s.waitForURL(BASE + "/");
-await s.goto(BASE + "/admin/users"); ok(s.url().includes("denied"), "الموظف لا يفتح إدارة المستخدمين");
+await s.goto(BASE + "/admin/users"); await s.waitForURL(/denied/, { timeout: 8000 }).catch(() => {}); ok(s.url().includes("denied") && await s.locator("text=المستخدمون").locator("xpath=ancestor::table").count() === 0, "الموظف لا يفتح إدارة المستخدمين");
 await s.goto(BASE + `/cycle?m=${month}`, { waitUntil: "networkidle" });
 ok(await s.locator("summary", { hasText: "تسجيل التحويل" }).count() === 0, "الموظف لا يرى تسجيل التحويل");
 ok(await s.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), "عرض الموبايل بدون تمرير أفقي");
+
+// ── الحالات والقرارات (بند واحد) + أعمدة الدفعة + Excel
+await go("/cases?q=5001");
+ok(await p.locator("table.grouped th", { hasText: "البداية" }).count() === 1 && await p.locator("table.grouped th", { hasText: "نص القرار" }).count() === 1, "الحالات: البداية والنهاية ونص القرار ظاهرين");
+ok(await p.locator(".tabs a", { hasText: "القرارات" }).count() === 1, "الحالات والقرارات بتابين");
+await go(`/cycle?m=${month}`);
+const heads = await p.locator(".card table th").allInnerTexts();
+ok(["الكود", "الاسم", "رقم الهاتف", "اسم المستلم", "الرقم القومي", "موقف الإقامة", "انتهاء الإقامة", "الخدمة", "التكلفة", "القرار", "بداية القرار", "نهاية القرار"].every((h) => heads.some((x) => x.trim() === h)), "دورة الصرف: كل الأعمدة المطلوبة");
+const xl = await p.request.get(BASE + `/api/export/cycle?m=${month}&kind=financial&format=xlsx`);
+const xb = await xl.body();
+ok(xl.status() === 200 && xb[0] === 0x50 && xb[1] === 0x4b && (xl.headers()["content-type"] || "").includes("spreadsheetml"), "تصدير Excel للدفعة");
+const bHref = await p.locator("a", { hasText: "Excel الدفعة" }).first().getAttribute("href").catch(() => null);
+ok(!!bHref && (await p.request.get(BASE + bHref)).status() === 200, "تنزيل شيت دفعة مرسلة");
+await go("/decisions/new");
+await p.locator('input[name="code"]').fill("5001");
+await p.waitForSelector(".case-info .kv", { timeout: 10000 }).catch(() => {});
+ok(await p.locator(".case-info", { hasText: "بيانات الحالة من السيستم" }).count() === 1, "فورم القرار يجيب بيانات الحالة من السيستم");
 
 ok(errors.length === 0, `أخطاء المتصفح: ${errors.length ? errors.join(" | ") : "لا يوجد"}`);
 await browser.close();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createDecision } from "@/actions/decisions";
 import { ActionForm, Submit } from "./forms";
 
@@ -28,6 +28,7 @@ export function DecisionForm({ services, cases, init, canOverride }: {
   const mk = (svc: string, amount: string, months: number, start = base, beneficiary = ""): Line => ({ svc, amount, months, start, end: add(start, months - 1), note: "", touchedEnd: false, beneficiary });
   const [lines, setLines] = useState<Line[]>(init.lines?.length ? init.lines.map((l) => mk(l.svc, l.amount, l.months, base, l.beneficiary ?? "")) : [mk(services[0]?.id ?? "", "", 6)]);
   const found = cases.find((c) => c.code === code.trim());
+  const info = useCaseInfo(found?.code);
   const set = (i: number, p: Partial<Line>) => setLines((ls) => ls.map((l, j) => {
     if (j !== i) return l;
     const n = { ...l, ...p };
@@ -51,6 +52,7 @@ export function DecisionForm({ services, cases, init, canOverride }: {
         <label className="field"><span>رقم القرار</span><input name="no" placeholder="تلقائي لو فاضي" /></label>
         <label className="field"><span>المتبرع</span><input name="donor" defaultValue={init.donor} /></label>
       </div>
+      {found && <CaseInfo info={info} />}
       <datalist id="caseCodes">{cases.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}</datalist>
       <div className="alert">بداية الصرف المقترحة من تاريخ القرار: <b>{fmt(suggest(issue))}</b> (القرار من 19 إلى 18 يبدأ صرفه أول الشهر التالي). لا يُنشأ أي استحقاق بعد شهر النهاية.</div>
       <label className="field"><span>نص القرار (اختياري)</span><textarea name="text" defaultValue={init.text} /></label>
@@ -80,5 +82,43 @@ export function DecisionForm({ services, cases, init, canOverride }: {
         : <div className="alert warn">يوجد تعارض مع قرار ساري. أوقف القرار القديم أولاً أو اطلب مراجعة المشرف.</div>)}
       <div><Submit>حفظ القرار</Submit></div>
     </ActionForm>
+  );
+}
+
+type Info = { name: string; nationality: string; governorate: string; area: string; address: string; phone: string; age: number | null; unhcr: string; recvName: string; recvIdNo: string; recvMethod: string; residencyStatus: string; residencyExpiry: string; missing: string[] };
+
+/** البيانات الأولية بتتجاب من السيستم أول ما الكود يتكتب */
+function useCaseInfo(code?: string) {
+  const [info, setInfo] = useState<Info | null | "loading">(null);
+  useEffect(() => {
+    if (!code) { setInfo(null); return; }
+    let live = true;
+    setInfo("loading");
+    fetch(`/api/cases/${encodeURIComponent(code)}`).then((r) => r.json()).then((j) => { if (live) setInfo(j.found ? j : null); }).catch(() => live && setInfo(null));
+    return () => { live = false; };
+  }, [code]);
+  return info;
+}
+
+function CaseInfo({ info }: { info: Info | null | "loading" }) {
+  if (info === "loading") return <div className="case-info loading">جارٍ تحميل بيانات الحالة…</div>;
+  if (!info) return null;
+  const v = (x: React.ReactNode) => x || <span className="muted">—</span>;
+  return (
+    <div className="case-info">
+      <div className="ci-head"><b>بيانات الحالة من السيستم</b><span className={`badge ${info.missing.length ? "warn" : "ok"}`}>{info.missing.length ? `بيانات الاستلام ناقصة: ${info.missing.join("، ")}` : "بيانات الاستلام مكتملة"}</span></div>
+      <div className="kv">
+        <div><span>الاسم</span>{info.name}</div>
+        <div><span>الجنسية</span>{v(info.nationality)}</div>
+        <div><span>المحافظة / المنطقة</span>{v([info.governorate, info.area].filter(Boolean).join(" · "))}</div>
+        <div><span>الهاتف</span>{v(<span className="num">{info.phone}</span>)}</div>
+        <div><span>السن</span>{v(info.age)}</div>
+        <div><span>اسم المستلم</span>{v(info.recvName)}</div>
+        <div><span>الرقم القومي</span>{v(<span className="num">{info.recvIdNo}</span>)}</div>
+        <div><span>طريقة الاستلام</span>{v(info.recvMethod)}</div>
+        <div><span>موقف الإقامة</span>{v([info.residencyStatus, info.residencyExpiry && `حتى ${info.residencyExpiry}`].filter(Boolean).join(" · "))}</div>
+      </div>
+      <p className="muted">بيانات الاستلام (المستلم، الرقم القومي، طريقة الاستلام، الإقامة) بتتأكد في مكالمة التأكيد قبل الصرف.</p>
+    </div>
   );
 }

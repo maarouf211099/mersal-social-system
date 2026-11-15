@@ -6,12 +6,29 @@ import { STAGES } from "./stage";
 import { fmtMonth, addMonths, currentMonth } from "./months";
 import { fmtDate, fmtDur, fmtTs, pct } from "./format";
 import { userNames } from "./users";
+import { cycleList, cycleRow, CYCLE_HEADS, batchCodes } from "./cycle-list";
+
+const KIND_LABELS: Record<string, string> = { financial: "مالي", card: "كارت", in_kind: "عيني", service: "خدمات" };
 import { RENEWAL_LABELS, OP_STATUS_LABELS } from "./constants";
 
 /** صفوف التصدير (CSV) — نفس الأرقام اللي في الشاشة */
-export async function exportRows(kind: string, m: string, f: Filter, extra: Record<string, string>): Promise<{ name: string; rows: (string | number)[][] }> {
+export async function exportRows(kind: string, m: string, f: Filter, extra: Record<string, string>): Promise<{ name: string; rows: (string | number)[][]; title?: string }> {
   const st = await getSettings();
   const names = await userNames();
+  if (kind === "cycle") {
+    const kindKey = extra.kind || "financial";
+    const batch = extra.batch ? await prisma.paymentBatch.findUnique({ where: { id: extra.batch } }) : null;
+    const svc = extra.svc ? await prisma.service.findUnique({ where: { id: extra.svc } }) : null;
+    const { list } = await cycleList({ m, kind: kindKey, svc: extra.svc, stage: extra.stage, q: extra.q, batch: extra.batch, data: extra.data });
+    const codes = await batchCodes(list.map((e) => e.batchId));
+    const total = list.reduce((a, e) => a + e.amountN, 0);
+    const label = batch ? `دفعة ${batch.code}` : `${svc?.name ?? KIND_LABELS[kindKey] ?? ""} ${fmtMonth(m)}`;
+    return {
+      name: batch ? `دفعة-${batch.code}` : `دورة-الصرف-${svc?.name ?? KIND_LABELS[kindKey] ?? kindKey}-${m}`,
+      title: `مؤسسة مرسال · الإدارة الاجتماعية — ${label} · ${list.length} حالة · الإجمالي ${total.toLocaleString("en-US")} جنيه`,
+      rows: [CYCLE_HEADS, ...list.map((e) => cycleRow(e, e.batchId ? codes.get(e.batchId) ?? "" : ""))],
+    };
+  }
   if (kind === "month") {
     const M = await metrics(m, f, st.followDays);
     return { name: `تقرير-${m}`, rows: [["الكود", "الاسم", "المحافظة", "الجنسية", "الخدمة", "المستفيد", "القيمة", "الموقف", "المحوّل", "مرجع التحويل", "المسترد", "وصل للمستفيد", "محاولات المتابعة", "أرسله", "تاريخ الإرسال"],

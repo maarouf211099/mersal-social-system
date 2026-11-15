@@ -22,11 +22,11 @@ export function PageHead({ title, sub, children }: { title: string; sub?: React.
     </div>
   );
 }
-export function Table({ heads, children, empty, flat }: { heads: React.ReactNode[]; children: React.ReactNode; empty?: string; flat?: boolean }) {
+export function Table({ heads, children, empty, flat, wide }: { heads: React.ReactNode[]; children: React.ReactNode; empty?: string; flat?: boolean; wide?: boolean }) {
   const has = Array.isArray(children) ? children.length > 0 : !!children;
   if (!has) return <div className="empty">{empty ?? "لا توجد بيانات"}</div>;
   return (
-    <div className={`table-wrap${flat ? " flat" : ""}`}>
+    <div className={`table-wrap${flat ? " flat" : ""}${wide ? " wide" : ""}`}>
       <table><thead><tr>{heads.map((h, i) => <th key={i}>{h}</th>)}</tr></thead><tbody>{children}</tbody></table>
     </div>
   );

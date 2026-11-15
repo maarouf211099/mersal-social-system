@@ -31,15 +31,13 @@ export function CaseFields({ c, part = "all", withCode }: { c?: Partial<Case>; p
             <Inp name="area" label="المنطقة" v={c?.area} />
             <Inp name="address" label="العنوان" v={c?.address} />
             <Inp name="unhcr" label="رقم المفوضية" v={c?.unhcr} ltr />
-            <Sel name="residencyStatus" label="موقف الإقامة" list={[...new Set([...RESIDENCY, c?.residencyStatus ?? ""].filter(Boolean))]} v={c?.residencyStatus} />
-            <Inp name="residencyExpiry" label="انتهاء الإقامة" v={c?.residencyExpiry} ltr />
           </div>
           <label className="field" style={{ marginTop: 12 }}><span>وصف الحالة</span><textarea name="description" defaultValue={c?.description ?? ""} /></label>
         </>
       )}
       {(part === "receive" || part === "all") && (
         <>
-          <h3 className="section-title"><span>التواصل والاستلام</span></h3>
+          <h3 className="section-title"><span>بيانات الاستلام (تتحدد في المكالمة)</span></h3>
           <div className="fgrid">
             <Inp name="phone" label="هاتف" v={c?.phone} type="tel" ltr />
             <Inp name="phone2" label="هاتف بديل" v={c?.phone2} type="tel" ltr />
@@ -48,6 +46,8 @@ export function CaseFields({ c, part = "all", withCode }: { c?: Partial<Case>; p
             <Inp name="recvPhone" label="رقم الاستلام / المحفظة" v={c?.recvPhone} ltr />
             <Inp name="recvIdNo" label="الرقم القومي / إثبات الشخصية" v={c?.recvIdNo} ltr />
             <Inp name="idExpiry" label="انتهاء الرقم القومي" v={c?.idExpiry} ltr />
+            <Sel name="residencyStatus" label="موقف الإقامة" list={[...new Set([...RESIDENCY, c?.residencyStatus ?? ""].filter(Boolean))]} v={c?.residencyStatus} />
+            <Inp name="residencyExpiry" label="انتهاء الإقامة" v={c?.residencyExpiry} ltr />
             <Inp name="recvBranch" label="الفرع / مكتب البريد" v={c?.recvBranch} />
           </div>
         </>

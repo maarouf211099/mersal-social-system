@@ -5,6 +5,8 @@ import { can } from "@/lib/perms";
 import { ROLE_LABELS } from "@/lib/perms";
 import { Icon, Logo } from "./icons";
 import { Toaster } from "./forms";
+import { Suspense } from "react";
+import { NavProgress } from "./NavProgress";
 
 type NavItem = { href: string; label: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.JSX.Element; count?: number };
 
@@ -13,8 +15,7 @@ export function Shell({ user, current, counts, children }: { user: AppUser; curr
   const main: NavItem[] = [
     { href: "/", label: "لوحة المتابعة", icon: Icon.home },
     { href: "/my", label: "مهامي", icon: Icon.inbox, count: counts.my },
-    { href: "/cases", label: "الحالات", icon: Icon.folder },
-    { href: "/decisions", label: "القرارات", icon: Icon.file },
+    { href: "/cases", label: "الحالات والقرارات", icon: Icon.folder },
     { href: "/cycle", label: "دورة الصرف", icon: Icon.wallet },
     { href: "/follow", label: "المتابعة", icon: Icon.phone },
     { href: "/refunds", label: "الاستردادات", icon: Icon.undo },
@@ -31,7 +32,8 @@ export function Shell({ user, current, counts, children }: { user: AppUser; curr
       { href: "/admin/import", label: "استيراد البيانات", icon: Icon.upload },
     ] : []),
   ];
-  const active = (href: string) => (href === "/" ? current === "/" : current === href || current.startsWith(href + "/"));
+  const under = (href: string) => current === href || current.startsWith(href + "/");
+  const active = (href: string) => (href === "/" ? current === "/" : under(href) || (href === "/cases" && under("/decisions")));
   const link = (n: NavItem) => (
     <Link key={n.href} href={n.href} aria-current={active(n.href) ? "page" : undefined}>
       <n.icon /> {n.label}{!!n.count && <span className="count">{n.count}</span>}
@@ -39,6 +41,7 @@ export function Shell({ user, current, counts, children }: { user: AppUser; curr
   );
   return (
     <div className="shell">
+      <Suspense fallback={null}><NavProgress /></Suspense>
       <aside className="side" id="side">
         <Link href="/" className="logo" aria-label="الإدارة الاجتماعية"><Logo height={40} /></Link>
         <div className="sys-title">نظام الإدارة الاجتماعية</div>

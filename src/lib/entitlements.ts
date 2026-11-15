@@ -2,11 +2,12 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { addMonths } from "./months";
+import { recvMissing } from "./recv";
 import { isResolved, netReceived, stageOf, transferredAmount, type Kind, type Stage } from "./stage";
 
 export const ENT_INCLUDE = {
-  line: { include: { service: true, decision: { select: { id: true, no: true, status: true } } } },
-  case: { select: { code: true, name: true, phone: true, governorate: true, nationality: true, recvMethod: true, recvPhone: true, dataConfirmed: true } },
+  line: { include: { service: true, decision: { select: { id: true, no: true, status: true, text: true, issueDate: true } } } },
+  case: { select: { code: true, name: true, phone: true, governorate: true, nationality: true, recvMethod: true, recvPhone: true, recvName: true, recvIdNo: true, residencyStatus: true, residencyExpiry: true, dataConfirmed: true } },
   transfer: true,
   refunds: { select: { amount: true, settlement: true } },
   attempts: { where: { kind: "follow", voided: false }, orderBy: { createdAt: "asc" } },
@@ -15,7 +16,7 @@ export const ENT_INCLUDE = {
 type Raw = Prisma.EntitlementGetPayload<{ include: typeof ENT_INCLUDE }>;
 export type Ent = Raw & {
   stage: Stage; kind: Kind; serviceName: string; amountN: number; transferred: number; refundTotal: number; received: number;
-  unanswered: number; followDone: boolean; settled: boolean;
+  unanswered: number; followDone: boolean; settled: boolean; missing: string[];
 };
 
 function enrich(e: Raw, prevResolved: boolean | null, followDays: number): Ent {
@@ -34,7 +35,7 @@ function enrich(e: Raw, prevResolved: boolean | null, followDays: number): Ent {
     ...e, stage, kind, serviceName: e.line.service.name, amountN, transferred, refundTotal,
     received: netReceived(stage, transferred, amountN, refundTotal), unanswered,
     followDone: e.followResult !== "none" || e.attempts.some((a) => a.answered) || unanswered >= 3,
-    settled: !!e.settledHow,
+    settled: !!e.settledHow, missing: recvMissing(e.case),
   };
 }
 

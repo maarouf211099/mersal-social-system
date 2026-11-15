@@ -78,7 +78,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
             <label className="field" style={{ maxWidth: 320 }}><span>نتيجة المكالمة *</span><select name="result" required defaultValue=""><option value="">اختار</option><option value="confirmed">تم الرد وتأكيد البيانات</option><option value="updated">تم الرد وتحديث البيانات</option><option value="no_answer">لم يرد</option></select></label>
             <CaseFields c={c} part="receive" />
             <label className="field"><span>ملاحظات المكالمة</span><textarea name="note" /></label>
-            <p className="muted">البيانات اللي تتعدل هنا تتحدث في ملف الحالة، والقيمة القديمة تتحفظ في سجل التعديلات. للمالي: الهاتف وطريقة الاستلام (ورقم المحفظة) إلزامية.</p>
+            <p className="muted">البيانات اللي تتعدل هنا تتحدث في ملف الحالة، والقيمة القديمة تتحفظ في سجل التعديلات. للمالي: الهاتف وطريقة الاستلام (ورقم المحفظة) إلزامية. لو اسم المستلم أو الرقم القومي أو موقف الإقامة لسه ناقص، الحالة هتفضل معلّمة «بيانات ناقصة» في الدفعة.</p>
             <div><Submit>حفظ النتيجة</Submit></div>
           </ActionForm>
         </div>

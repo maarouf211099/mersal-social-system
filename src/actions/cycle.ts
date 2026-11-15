@@ -195,7 +195,8 @@ export async function sendBatch(_p: State, f: FormData): Promise<State> {
         await logAudit(tx, u.id, "batch_sent", code, { count: list.length, total, kind });
       }
     });
-    return `أُرسلت ${ok.length} حالة (${codes.join("، ")})${blocked ? ` · لم تُرسل ${blocked} لأنها غير جاهزة` : ""}.`;
+    const missing = ok.filter((e) => e.missing.length).length;
+    return `أُرسلت ${ok.length} حالة (${codes.join("، ")})${blocked ? ` · لم تُرسل ${blocked} لأنها غير جاهزة` : ""}${missing ? ` · تنبيه: ${missing} منها بيانات الاستلام ناقصة` : ""}. تقدر تنزل شيت الدفعة Excel من «دفعات الشهر».`;
   });
 }
 
