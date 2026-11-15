@@ -1,0 +1,444 @@
+// نظام تشغيل الإدارة الاجتماعية — مؤسسة مرسال
+// كل الجداول جوه schema اسمها "social" (من DATABASE_URL ?schema=social)
+// المبالغ بالجنيه كأرقام صحيحة/عشرية (Decimal) — الشهور بصيغة YYYY-MM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────── المستخدمون والصلاحيات ─────────────
+enum Role {
+  admin      // مدير: كل حاجة + الإعدادات والمستخدمين
+  supervisor // مشرف: التشغيل + الإسناد والاعتماد والإرجاع والإيقاف
+  finance    // مالي: التحويلات والاستردادات + التشغيل اليومي
+  staff      // موظف: الحالات والقرارات والتأكيد والإرسال والمتابعة والعمليات
+  viewer     // قراءة فقط
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  name               String
+  passwordHash       String
+  role               Role      @default(staff)
+  team               String    @default("")
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(true)
+  sessionVersion     Int       @default(1)
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+// ───────────── MASTER الحالات ─────────────
+model Case {
+  code          String    @id // كود الحالة — لا يتكرر
+  name          String
+  birthDate     DateTime? @db.Date
+  gender        String    @default("")
+  nationality   String    @default("")
+  familySize    Int?
+  governorate   String    @default("")
+  address       String    @default("")
+  phone         String    @default("")
+  phone2        String    @default("")
+  unhcr         String    @default("") // رقم المفوضية
+  recvMethod    String    @default("") // طريقة الاستلام
+  recvName      String    @default("")
+  recvPhone     String    @default("") // رقم الاستلام / المحفظة
+  recvIdNo      String    @default("")
+  recvBranch    String    @default("")
+  notes         String    @default("")
+  dataConfirmed Boolean   @default(false)
+  confirmedAt   DateTime?
+  confirmedById String?
+  createdAt     DateTime  @default(now())
+  createdById   String?
+  updatedAt     DateTime  @updatedAt
+  updatedById   String?
+
+  decisions    Decision[]
+  entitlements Entitlement[]
+  changes      CaseChange[]
+  operations   Operation[]
+
+  @@index([name])
+  @@index([phone])
+}
+
+// سجل تعديل بيانات الحالة: القيمة القديمة والجديدة لكل حقل
+model CaseChange {
+  id        String   @id @default(cuid())
+  caseCode  String
+  userId    String?
+  source    String // تعديل بيانات · مكالمة تأكيد بيانات · استيراد
+  diffs     Json // [{field,label,old,new}]
+  createdAt DateTime @default(now())
+  case      Case     @relation(fields: [caseCode], references: [code])
+
+  @@index([caseCode, createdAt])
+}
+
+// ───────────── الخدمات ─────────────
+enum ServiceKind {
+  financial // مالي: يحتاج تحويل
+  card // كارت
+  in_kind // عيني
+  service // خدمة (سكن، علاج، متابعة…) — بدون استحقاق شهري
+}
+
+enum ServiceCycle {
+  monthly
+  once
+  coverage // تغطية طوال المدة
+}
+
+model Service {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  kind        ServiceKind
+  cycle       ServiceCycle
+  needsFollow Boolean      @default(true) // يحتاج مكالمة متابعة لاعتباره مستلم
+  isActive    Boolean      @default(true)
+  sort        Int          @default(0)
+  lines       DecisionLine[]
+}
+
+// ───────────── القرارات ─────────────
+enum DecisionStatus {
+  active // مستمر
+  stopped // موقوف
+  withdrawn // مسحوب
+  ended // منتهي
+}
+
+enum RenewalStatus {
+  none
+  sent // أُرسلت للتجديد / إعادة البحث
+  renewed // تم التجديد
+  not_renewed // لم يُجدد
+}
+
+model Decision {
+  id            String         @id @default(cuid())
+  no            String         @unique // رقم القرار
+  caseCode      String
+  issueDate     DateTime       @db.Date
+  donor         String         @default("")
+  text          String         @default("")
+  status        DecisionStatus @default(active)
+  stopReason    String         @default("")
+  stoppedAt     DateTime?
+  stoppedById   String?
+  overrideNote  String         @default("") // سبب اعتماد قرار متداخل (مشرف)
+  renewOfId     String?
+  renewalStatus RenewalStatus  @default(none)
+  renewalAt     DateTime?
+  renewalById   String?
+  renewalNote   String         @default("")
+  createdAt     DateTime       @default(now())
+  createdById   String?
+  case          Case           @relation(fields: [caseCode], references: [code])
+  lines         DecisionLine[]
+
+  @@index([caseCode])
+  @@index([status])
+}
+
+model DecisionLine {
+  id           String        @id @default(cuid())
+  decisionId   String
+  caseCode     String
+  serviceId    String
+  amount       Decimal       @db.Decimal(12, 2)
+  months       Int
+  startMonth   String // YYYY-MM
+  endMonth     String // YYYY-MM
+  mismatchNote String        @default("")
+  extendedBy   Int           @default(0)
+  decision     Decision      @relation(fields: [decisionId], references: [id])
+  service      Service       @relation(fields: [serviceId], references: [id])
+  entitlements Entitlement[]
+
+  @@index([caseCode])
+  @@index([startMonth, endMonth])
+}
+
+// ───────────── دورة الصرف ─────────────
+enum FollowResult {
+  none
+  received // تم الرد وتم الصرف / تم الاستلام
+  not_received // رد ولم يتم الصرف
+  no_answer // 3 محاولات بدون رد
+}
+
+enum SettleHow {
+  carry // ترحيل المبلغ على الشهر التالي
+  extend // تمديد البند شهراً
+  drop // لا تعويض
+}
+
+model PaymentBatch {
+  id        String        @id @default(cuid())
+  code      String        @unique
+  month     String
+  kind      ServiceKind
+  count     Int
+  total     Decimal       @db.Decimal(12, 2)
+  userId    String?
+  createdAt DateTime      @default(now())
+  items     Entitlement[]
+}
+
+// الاستحقاق الشهري: واحد لكل خدمة لكل شهر (lineId + month لا يتكرر)
+// المرحلة لا تُخزّن — تُحسب من الحقول (src/lib/stage.ts) فلا تتناقض مع البيانات
+model Entitlement {
+  id         String  @id @default(cuid())
+  lineId     String
+  decisionId String
+  caseCode   String
+  month      String
+  baseAmount Decimal @db.Decimal(12, 2)
+  amount     Decimal @db.Decimal(12, 2)
+
+  needsConfirm  Boolean   @default(false)
+  confirmedAt   DateTime?
+  confirmedById String?
+  confirmNote   String    @default("")
+
+  holdApprovedAt     DateTime?
+  holdApprovedById   String?
+  holdApprovedReason String     @default("")
+  holdApprovedHow    SettleHow?
+  carriedFromId      String?
+  carriedAmount      Decimal    @default(0) @db.Decimal(12, 2)
+
+  sentAt   DateTime?
+  sentById String?
+  batchId  String?
+
+  followResult FollowResult @default(none)
+  followAt     DateTime?
+  followById   String?
+
+  notPaidReason String    @default("")
+  notPaidAction String    @default("")
+
+  stuckReason String    @default("")
+  stuckAt     DateTime?
+  stuckById   String?
+
+  stoppedAt     DateTime?
+  stoppedReason String    @default("")
+
+  settledHow  SettleHow?
+  settledAt   DateTime?
+  settledById String?
+  settledNote String     @default("")
+
+  legacySent Boolean  @default(false) // مستورد من النظام السابق كـ«تم الإرسال» بدون بيانات تحويل
+  createdAt  DateTime @default(now())
+  createdById String?
+
+  line      DecisionLine     @relation(fields: [lineId], references: [id])
+  case      Case             @relation(fields: [caseCode], references: [code])
+  batch     PaymentBatch?    @relation(fields: [batchId], references: [id])
+  transfer  Transfer?
+  attempts  ContactAttempt[]
+  refunds   Refund[]
+  tasks     Task[]
+
+  @@unique([lineId, month])
+  @@index([month])
+  @@index([caseCode])
+}
+
+// التحويل المالي — كل البيانات إلزامية، ولا يُحذف (trigger في القاعدة)
+model Transfer {
+  id            String      @id @default(cuid())
+  entitlementId String      @unique
+  amount        Decimal     @db.Decimal(12, 2)
+  method        String
+  date          DateTime    @db.Date
+  ref           String
+  batchRef      Boolean     @default(false) // مرجع دفعة مشترك
+  userId        String?
+  createdAt     DateTime    @default(now())
+  entitlement   Entitlement @relation(fields: [entitlementId], references: [id])
+
+  @@index([ref])
+}
+
+enum AttemptKind {
+  confirm // مكالمة تأكيد بيانات
+  follow // مكالمة متابعة صرف
+}
+
+model ContactAttempt {
+  id            String      @id @default(cuid())
+  entitlementId String
+  kind          AttemptKind
+  answered      Boolean
+  result        String
+  note          String      @default("")
+  voided        Boolean     @default(false) // أُرجعت للتصحيح
+  userId        String?
+  createdAt     DateTime    @default(now())
+  entitlement   Entitlement @relation(fields: [entitlementId], references: [id])
+
+  @@index([entitlementId, kind])
+}
+
+enum RefundType {
+  full
+  partial
+}
+
+enum Settlement {
+  pending
+  settled
+}
+
+model Refund {
+  id             String      @id @default(cuid())
+  entitlementId  String
+  caseCode       String
+  month          String
+  transferAmount Decimal     @db.Decimal(12, 2)
+  amount         Decimal     @db.Decimal(12, 2)
+  date           DateTime    @db.Date
+  reason         String
+  ref            String      @default("")
+  type           RefundType
+  settlement     Settlement  @default(pending)
+  how            SettleHow?
+  note           String      @default("")
+  userId         String?
+  createdAt      DateTime    @default(now())
+  settledAt      DateTime?
+  settledById    String?
+  entitlement    Entitlement @relation(fields: [entitlementId], references: [id])
+
+  @@index([month])
+}
+
+// ───────────── المهام ─────────────
+enum TaskKind {
+  confirm // مكالمة تأكيد بيانات (تلقائية)
+  follow // مكالمة متابعة صرف (تلقائية)
+  action // معالجة عدم صرف (تلقائية)
+  manual // يدوية
+}
+
+enum TaskStatus {
+  new
+  in_progress
+  done
+  stuck
+  cancelled // أُلغيت (إيقاف القرار) — لا تُحسب على أحد
+}
+
+model Task {
+  id            String       @id @default(cuid())
+  kind          TaskKind
+  title         String
+  opType        String       @default("")
+  caseCode      String?
+  entitlementId String?
+  assigneeId    String?
+  status        TaskStatus   @default(new)
+  dueAt         DateTime
+  notes         String       @default("")
+  result        String       @default("")
+  createdAt     DateTime     @default(now())
+  createdById   String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  completedById String? // اللي نفّذ فعلاً (ممكن يختلف عن المسند إليه)
+  returnedCount Int          @default(0)
+  returnNote    String       @default("")
+  returnedToId  String?
+  entitlement   Entitlement? @relation(fields: [entitlementId], references: [id])
+
+  @@unique([kind, entitlementId])
+  @@index([assigneeId, status])
+  @@index([createdAt])
+  @@index([completedById, completedAt])
+}
+
+// ───────────── سجل العمليات الموحد ─────────────
+enum OpStatus {
+  new
+  in_progress
+  done
+}
+
+model OpType {
+  id       String  @id @default(cuid())
+  name     String  @unique
+  team     String
+  weight   Decimal @db.Decimal(6, 2)
+  scope    String // case | general
+  auto     Boolean @default(false) // يسجلها النظام تلقائياً
+  isActive Boolean @default(true)
+  sort     Int     @default(0)
+}
+
+model Operation {
+  id            String   @id @default(cuid())
+  type          String
+  team          String
+  weight        Decimal  @db.Decimal(6, 2)
+  caseCode      String?
+  dept          String   @default("") // الجهة للعمليات العامة
+  date          DateTime @db.Date // تاريخ التنفيذ
+  status        OpStatus @default(done)
+  result        String   @default("")
+  notes         String   @default("")
+  attachment    String   @default("")
+  count         Int      @default(1)
+  ref           String   @default("")
+  auto          Boolean  @default(false)
+  userId        String // المنفذ — تلقائي
+  createdAt     DateTime @default(now()) // وقت التسجيل — تلقائي
+  returnedCount Int      @default(0)
+  returnNote    String   @default("")
+  case          Case?    @relation(fields: [caseCode], references: [code])
+
+  @@index([date])
+  @@index([userId, date])
+  @@index([caseCode])
+}
+
+// ───────────── الإعدادات والتدقيق ─────────────
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedById String?
+}
+
+// سجل التدقيق — لا يُعدّل ولا يُحذف (trigger في القاعدة)
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  userId    String?
+  action    String
+  target    String?
+  meta      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+}
+
+// تذاكر دخول البوابة المستخدمة — تمنع استخدام نفس التذكرة مرتين
+model SsoJti {
+  jti       String   @id
+  createdAt DateTime @default(now())
+}
