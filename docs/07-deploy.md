@@ -94,3 +94,11 @@ schtasks /create /tn "mersal-social-backup" /sc daily /st 23:30 /tr "cmd /c cd /
 
 ## نقل البيانات من النظام السابق (صفحة HTML)
 من النظام السابق: الإعدادات ← تصدير نسخة كاملة (JSON). وفي النظام الجديد: الإدارة ← استيراد البيانات. بيشتغل مرة واحدة على قاعدة فاضية، في عملية واحدة (يا ينجح كله يا مايتحفظش حاجة).
+
+## إنشاء حسابات كتير مرة واحدة
+```powershell
+cd D:\src\mersal-social-system; git pull
+node scripts/create-users.mjs --dir D:\apis\mersal-social --role staff --password "كلمة-مؤقتة" "a@mersal-ngo.org=الاسم" "b@mersal-ngo.org=الاسم"
+```
+- كل حساب بيطلب تغيير كلمة المرور أول دخول. الإيميل الموجود قبل كده بيتخطاه (ضيف `--reset` لو عايز تعمله كلمة مؤقتة جديدة).
+- الأدوار: `staff` موظف · `supervisor` مشرف · `finance` مالية · `viewer` اطلاع · `admin` مدير.
