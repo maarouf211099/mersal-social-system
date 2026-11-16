@@ -34,10 +34,11 @@ jobs:
     env:
       DEPLOY_DIR: ${{ vars.DEPLOY_DIR || 'D:\apis\mersal-social' }}
     steps:
+      # كلمة المرور بتتقري من ملف الحدث مباشرة (مش من env) عشان ماتظهرش في رأس الخطوة قبل الإخفاء
       - name: إخفاء كلمة المرور من اللوج
-        env:
-          PW: ${{ inputs.password }}
-        run: Write-Output "::add-mask::$env:PW"
+        run: |
+          $pw = (Get-Content -Raw -Encoding UTF8 $env:GITHUB_EVENT_PATH | ConvertFrom-Json).inputs.password
+          Write-Output "::add-mask::$pw"
       - uses: actions/checkout@v4
       - run: npm ci --ignore-scripts
       - run: npx prisma generate
