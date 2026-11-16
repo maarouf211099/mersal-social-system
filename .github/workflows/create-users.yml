@@ -1,0 +1,61 @@
+# إنشاء حسابات للنظام على السيرفر من GitHub (Actions ← create-users ← Run workflow)
+# كلمة المرور المؤقتة بتتخفي من اللوج، وكل حساب بيطلب تغييرها أول دخول
+name: create-users
+
+on:
+  workflow_dispatch:
+    inputs:
+      users:
+        description: "الإيميلات (مسافة أو فاصلة بين كل واحد) — ممكن email=الاسم مفصولة بفاصلة"
+        required: true
+      role:
+        description: "الدور"
+        type: choice
+        options: [staff, supervisor, finance, viewer, admin]
+        default: staff
+      password:
+        description: "كلمة المرور المؤقتة (8 حروف على الأقل)"
+        required: true
+      reset:
+        description: "لو الإيميل موجود: اعمله كلمة مؤقتة جديدة"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-mersal-social
+  cancel-in-progress: false
+
+jobs:
+  create:
+    runs-on: [self-hosted, mersal-social]
+    env:
+      DEPLOY_DIR: ${{ vars.DEPLOY_DIR || 'D:\apis\mersal-social' }}
+    steps:
+      - name: إخفاء كلمة المرور من اللوج
+        env:
+          PW: ${{ inputs.password }}
+        run: Write-Output "::add-mask::$env:PW"
+      - uses: actions/checkout@v4
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      - name: إنشاء الحسابات
+        env:
+          PW: ${{ inputs.password }}
+          USERS: ${{ inputs.users }}
+          ROLE: ${{ inputs.role }}
+          RESET: ${{ inputs.reset }}
+        run: |
+          # emails separated by comma or space; email=name entries separated by comma
+          $list = @()
+          foreach ($p in ($env:USERS -split '[\r\n,;]+')) {
+            $t = $p.Trim()
+            if (-not $t) { continue }
+            if ($t -match '=') { $list += $t } else { $list += ($t -split '\s+' | Where-Object { $_ }) }
+          }
+          $extra = @()
+          if ($env:RESET -eq 'true') { $extra += '--reset' }
+          node scripts/create-users.mjs --dir "$env:DEPLOY_DIR" --role "$env:ROLE" --password "$env:PW" @extra @list
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
