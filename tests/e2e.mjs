@@ -249,6 +249,17 @@ await p.locator('input[name="code"]').fill("5001");
 await p.waitForSelector(".case-info .kv", { timeout: 10000 }).catch(() => {});
 ok(await p.locator(".case-info", { hasText: "بيانات الحالة من السيستم" }).count() === 1, "فورم القرار يجيب بيانات الحالة من السيستم");
 
+// ── إضافة مهمة من الأنواع وإسنادها لأكتر من موظف بمدة
+await go("/tasks");
+const nOps = await p.locator('details.new-task select[name="opType"] option:not([disabled])').count();
+ok(nOps >= 60, `أنواع المهام ظاهرة في الاختيارات (${nOps})`);
+await p.locator('details.new-task select[name="opType"]').selectOption({ index: 3 });
+await p.locator('details.new-task select[name="period"]').selectOption("30");
+const people = p.locator("details.new-task .person");
+const nPeople = Math.min(2, await people.count());
+for (let i = 0; i < nPeople; i++) await people.nth(i).click();
+ok((await submit(nPeople > 1 ? `إسناد المهمة لـ ${nPeople} موظفين` : "إنشاء المهمة")).includes(nPeople > 1 ? `لـ ${nPeople} موظفين` : "تم إنشاء المهمة"), "إسناد مهمة من نوع محدد لموظفين بمدة شهر");
+
 ok(errors.length === 0, `أخطاء المتصفح: ${errors.length ? errors.join(" | ") : "لا يوجد"}`);
 await browser.close();
 console.log(failures ? `\n✖ ${failures} فشل` : "\n✔ كل الاختبارات نجحت");

@@ -9,6 +9,8 @@ import { one, qs, type SP } from "@/lib/page";
 import { assignTasks, createTask } from "@/actions/tasks";
 import { Badge, PageHead, Seg } from "@/components/ui";
 import { ActionForm, Submit } from "@/components/forms";
+import { TaskForm } from "@/components/TaskForm";
+import { Icon } from "@/components/icons";
 import { TaskTable } from "@/components/TaskTable";
 
 const OPEN = { in: ["new", "in_progress"] as ("new" | "in_progress")[] };
@@ -27,17 +29,29 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
     open: { status: OPEN }, unassigned: { status: OPEN, assigneeId: null }, late: { status: OPEN, dueAt: { lt: now } },
     stuck: { status: "stuck" }, done: { status: "done" }, mine: { status: OPEN, assigneeId: u.id },
   };
-  const [rows, names, load] = await Promise.all([
+  const showForm = one(sp.new) === "1" || can(u.role, "assign");
+  const [rows, names, load, ops] = await Promise.all([
     prisma.task.findMany({ where: { ...base, ...(byView[view] ?? byView.open) }, orderBy: view === "done" ? { completedAt: "desc" } : [{ dueAt: "asc" }], take: 500 }),
     userNames(),
     prisma.task.groupBy({ by: ["assigneeId"], where: { status: OPEN }, _count: true }),
+    prisma.opType.findMany({ where: { isActive: true, auto: false }, orderBy: { sort: "asc" }, select: { name: true, team: true } }),
   ]);
   const lateBy = await prisma.task.groupBy({ by: ["assigneeId"], where: { status: OPEN, dueAt: { lt: now } }, _count: true });
   const caseNames = await caseNamesFor(rows.map((t) => t.caseCode));
   const views = [["open", "كل المفتوحة"], ["mine", "مهامي"], ["unassigned", "غير مسندة"], ["late", "المتأخرة"], ["stuck", "المتعثرة"], ["done", "المكتملة"]];
   return (
     <>
-      <PageHead title="توزيع المهام" sub={`مهام تأكيد البيانات والمتابعة والمعالجة تُنشأ تلقائياً من دورة الصرف (الإسناد التلقائي من الإعدادات). المواعيد: تأكيد ${st.confirmDays} · متابعة ${st.followDays} · معالجة ${st.actionDays} أيام.`} />
+      <PageHead title="توزيع المهام" sub={`أضف مهمة من أنواع العمليات وأسندها لموظف أو أكتر بمدة. مهام التأكيد والمتابعة والمعالجة بتتعمل تلقائياً من دورة الصرف (تأكيد ${st.confirmDays} · متابعة ${st.followDays} · معالجة ${st.actionDays} أيام).`}>
+        {can(u.role, "task") && <a className="btn primary" href="#new"><Icon.plus /> مهمة جديدة</a>}
+      </PageHead>
+      {can(u.role, "task") && (
+        <details className="box new-task" id="new" open={showForm}>
+          <summary>{can(u.role, "assign") ? "إضافة مهمة وإسنادها" : "إضافة مهمة لنفسي"}</summary>
+          <div style={{ marginTop: 12 }}>
+            <TaskForm ops={ops} people={names.active.map((x) => ({ id: x.id, name: x.name, team: x.team }))} canAssign={can(u.role, "assign")} me={{ id: u.id, name: u.name }} />
+          </div>
+        </details>
+      )}
       <div className="inline" style={{ marginBottom: 12 }}>
         <span className="muted">الحِمل الحالي:</span>
         {load.length ? load.map((l) => { const late = lateBy.find((x) => x.assigneeId === l.assigneeId)?._count ?? 0; return <a key={l.assigneeId ?? "none"} href={`/tasks${qs({ view: "open", who: l.assigneeId ?? undefined })}`}><Badge tone={l.assigneeId ? "" : "warn"} plain>{l.assigneeId ? names.name(l.assigneeId) : "غير مسندة"} · {l._count}{late ? ` · ${late} متأخرة` : ""}</Badge></a>; }) : <span className="muted">لا مهام مفتوحة</span>}
@@ -57,21 +71,6 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
           <TaskTable rows={rows} names={names} caseNames={caseNames} selectable={can(u.role, "assign")} empty="لا توجد مهام في هذا العرض." />
         </div>
       </ActionForm>
-      {can(u.role, "task") && (
-        <details className="box" style={{ marginTop: 14 }} id="new"><summary>+ مهمة يدوية</summary>
-          <ActionForm action={createTask} resetOnOk>
-            <div className="fgrid" style={{ marginTop: 10 }}>
-              <label className="field"><span>العنوان *</span><input name="title" required /></label>
-              <label className="field"><span>نوع العملية (للإنتاجية)</span><select name="opType" defaultValue=""><option value="">—</option>{(await prisma.opType.findMany({ where: { isActive: true, auto: false }, orderBy: { sort: "asc" } })).map((o) => <option key={o.id} value={o.name}>{o.name} · {o.team}</option>)}</select></label>
-              <label className="field"><span>كود الحالة</span><input name="caseCode" dir="ltr" /></label>
-              <label className="field"><span>مسندة إلى</span><select name="assigneeId" defaultValue={can(u.role, "assign") ? "" : u.id}>{can(u.role, "assign") ? <><option value="">غير مسندة</option>{names.active.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</> : <option value={u.id}>{u.name}</option>}</select></label>
-              <label className="field"><span>الموعد النهائي</span><input type="date" name="due" /></label>
-            </div>
-            <label className="field"><span>التفاصيل</span><textarea name="notes" /></label>
-            <div><Submit>إنشاء المهمة</Submit></div>
-          </ActionForm>
-        </details>
-      )}
     </>
   );
 }

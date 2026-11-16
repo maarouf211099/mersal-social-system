@@ -11,16 +11,29 @@ import { storeUpload } from "@/lib/files";
 export async function createTask(_p: State, f: FormData): Promise<State> {
   return run("task", async (u) => {
     const st = await getSettings();
-    const title = str(f, "title"), code = str(f, "caseCode"), assignee = str(f, "assigneeId");
-    if (!title) fail("اكتب عنوان المهمة.");
+    const opType = str(f, "opType"), extra = str(f, "title"), code = str(f, "caseCode");
+    const assignees = [...new Set(f.getAll("assigneeId").map(String).filter(Boolean))];
+    if (!opType && !extra) fail("اختار نوع المهمة.");
+    if (opType && !(await prisma.opType.findUnique({ where: { name: opType } }))) fail("نوع المهمة غير موجود.");
     if (code && !(await prisma.case.findUnique({ where: { code } }))) fail("كود الحالة غير مسجل.");
-    if (assignee && assignee !== u.id && !can(u.role, "assign")) fail("إسناد المهام لغيرك متاح للمشرف فقط.");
-    const dueAt = dateOf(str(f, "due")) ?? addDays(new Date(), st.taskDays);
+    if (assignees.some((a) => a !== u.id) && !can(u.role, "assign")) fail("إسناد المهام لغيرك متاح للمشرف فقط.");
+    if (can(u.role, "assign") && !assignees.length) fail("اختار الموظف اللي هتسند له المهمة.");
+    if (assignees.length > 1 && (await prisma.user.count({ where: { id: { in: assignees }, isActive: true } })) !== assignees.length) fail("فيه موظف غير موجود أو موقوف.");
+    // المدة: عدد أيام (يوم / أسبوع / شهر…) أو تاريخ محدد
+    const period = str(f, "period");
+    const days = Number(period);
+    const dueAt = period === "date" || !period
+      ? dateOf(str(f, "due")) ?? (period === "date" ? fail("اختار الموعد النهائي.") : addDays(new Date(), st.taskDays))
+      : days > 0 && days <= 366 ? addDays(new Date(), days) : fail("اختار المدة.");
+    const title = opType && extra ? `${opType} — ${extra}` : opType || extra;
+    const list = assignees.length ? assignees : [null];
     await prisma.$transaction(async (tx) => {
-      const t = await tx.task.create({ data: { kind: "manual", title, opType: str(f, "opType"), caseCode: code || null, assigneeId: assignee || null, dueAt, notes: str(f, "notes"), createdById: u.id } });
-      await logAudit(tx, u.id, "task_created", code || title, { id: t.id, assignee });
+      for (const a of list) {
+        const t = await tx.task.create({ data: { kind: "manual", title, opType, caseCode: code || null, assigneeId: a, dueAt: dueAt!, notes: str(f, "notes"), createdById: u.id } });
+        await logAudit(tx, u.id, "task_created", code || title, { id: t.id, assignee: a, opType, due: dueAt });
+      }
     });
-    return "تم إنشاء المهمة.";
+    return list.length > 1 ? `تم إسناد «${title}» لـ ${list.length} موظفين.` : "تم إنشاء المهمة.";
   });
 }
 

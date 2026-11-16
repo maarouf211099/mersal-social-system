@@ -447,3 +447,15 @@ td.info-cell { min-width: 190px; max-width: 260px; font-size: 12.5px; line-heigh
 td.info-cell > div + div { margin-top: 1px; }
 td.info-cell .badge { margin-bottom: 3px; }
 td.info-cell .miss { font-size: 11px; }
+
+/* إضافة مهمة: اختيار الموظفين */
+details.new-task { margin-bottom: 16px; }
+details.new-task > summary { font-size: 14.5px; }
+.people { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
+.person { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--border-2); border-radius: 9px; cursor: pointer; background: var(--surface); transition: all .15s var(--ease); font-size: 13px; }
+.person:hover { border-color: var(--accent); }
+.person input { accent-color: var(--accent); margin: 0; }
+.person small { margin-inline-start: auto; color: var(--muted); font-size: 11px; }
+.person.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+select optgroup { font-weight: 700; color: var(--accent-text); }
+select option { color: var(--text); font-weight: 400; }
