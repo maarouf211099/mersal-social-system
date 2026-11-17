@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseFeedback, canViewFeedbackResults } from "./feedback.ts";
+import { parseFeedback, canViewFeedbackResults, isResultsUser } from "./feedback.ts";
 
 const ok = { overall: 4, ease: 5, speed: null, value: 3, problems: " بطء ", ideas: "", department: " الإدارة الاجتماعية ", name: "" };
 
@@ -35,16 +35,25 @@ test("رسائل الخطأ بالعربي", () => {
   assert.equal(p.ok, false);
   if (!p.ok) assert.match(p.error, /الإدارة/);
 });
-test("النتائج لشخص واحد بس حسب الجزء اللي قبل @ في الإيميل", () => {
-  assert.equal(canViewFeedbackResults("Mahmoud.Maarouf@example.org"), true);
-  assert.equal(canViewFeedbackResults("mahmoud.maarouf@other.test", ""), true);
-  assert.equal(canViewFeedbackResults("admin@example.org"), false);
-  assert.equal(canViewFeedbackResults("mahmoud.maarouf2@example.org"), false);
-  assert.equal(canViewFeedbackResults("x.mahmoud.maarouf@example.org"), false);
-  assert.equal(canViewFeedbackResults(""), false);
+test("الشخص المحدد يتعرف من الجزء اللي قبل @ في الإيميل", () => {
+  assert.equal(isResultsUser("Mahmoud.Maarouf@example.org"), true);
+  assert.equal(isResultsUser("mahmoud.maarouf@other.test", ""), true);
+  assert.equal(isResultsUser("admin@example.org"), false);
+  assert.equal(isResultsUser("mahmoud.maarouf2@example.org"), false);
+  assert.equal(isResultsUser("x.mahmoud.maarouf@example.org"), false);
+  assert.equal(isResultsUser(""), false);
+  assert.equal(isResultsUser(null), false);
+  assert.equal(isResultsUser("someone@example.org", "Someone"), true);
+  assert.equal(isResultsUser("mahmoud.maarouf@example.org", "someone"), false);
+  assert.equal(isResultsUser("a@x.test", "a@x.test"), true);
+  assert.equal(isResultsUser("a@y.test", "a@x.test"), false);
+});
+test("النتائج للمدير (admin) + الشخص المحدد بس", () => {
+  assert.equal(canViewFeedbackResults({ email: "boss@example.org", role: "admin" }), true);
+  for (const role of ["supervisor", "finance", "staff", "viewer", "ADMIN", ""]) {
+    assert.equal(canViewFeedbackResults({ email: "x@example.org", role }), false, role);
+  }
+  assert.equal(canViewFeedbackResults({ email: "mahmoud.maarouf@example.org", role: "viewer" }), true);
+  assert.equal(canViewFeedbackResults({ email: "mahmoud.maarouf@example.org", role: "staff" }, "someone"), false);
   assert.equal(canViewFeedbackResults(null), false);
-  assert.equal(canViewFeedbackResults("someone@example.org", "Someone"), true);
-  assert.equal(canViewFeedbackResults("mahmoud.maarouf@example.org", "someone"), false);
-  assert.equal(canViewFeedbackResults("a@x.test", "a@x.test"), true);
-  assert.equal(canViewFeedbackResults("a@y.test", "a@x.test"), false);
 });

@@ -40,11 +40,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true }, { headers: NO_STORE });
 }
 
-/** كل الردود — لشخص واحد بس (FEEDBACK_RESULTS_USER). من غير أي معرّف للمستخدم */
+/** كل الردود — للمدير (admin) والشخص المحدد في FEEDBACK_RESULTS_USER. من غير أي معرّف للمستخدم */
 export async function GET() {
   const u = await auth();
   if (!u || u.mustChangePassword) return err(SESSION_ENDED, 401);
-  if (!isFeedbackViewer(u)) return err("نتائج التقييم مش متاحة لحسابك.", 403);
+  if (!isFeedbackViewer(u)) return err("نتائج التقييم متاحة للمدير بس.", 403);
   const rows = await prisma.feedback.findMany({
     where: { campaign: FEEDBACK_CAMPAIGN },
     orderBy: { createdAt: "desc" },

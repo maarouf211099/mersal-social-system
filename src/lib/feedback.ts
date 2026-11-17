@@ -60,11 +60,11 @@ export function parseFeedback(body: unknown): Parsed {
   };
 }
 
-/**
- * النتائج لشخص واحد بس: المستخدم اللي الجزء اللي قبل @ في إيميله = FEEDBACK_RESULTS_USER
- * (من غير فرق بين الحروف الكبيرة والصغيرة). النظام ده بيعرّف المستخدمين بالإيميل، مفيش username.
- */
-export function canViewFeedbackResults(email: string | null | undefined, allowed?: string | null): boolean {
+/** أعلى دور إداري في النظام — اللي يشوف نتائج التقييم */
+export const RESULTS_ROLES: readonly string[] = ["admin"];
+
+/** هل الإيميل ده هو الشخص المحدد في FEEDBACK_RESULTS_USER (الجزء اللي قبل @، من غير فرق بين الحروف الكبيرة والصغيرة) */
+export function isResultsUser(email: string | null | undefined, allowed?: string | null): boolean {
   const want = (allowed ?? "").trim().toLowerCase() || DEFAULT_RESULTS_USER;
   const e = (email ?? "").trim().toLowerCase();
   if (!e) return false;
@@ -72,4 +72,13 @@ export function canViewFeedbackResults(email: string | null | undefined, allowed
   const at = e.lastIndexOf("@");
   const local = at === -1 ? e : e.slice(0, at);
   return local === want;
+}
+
+/**
+ * مين يشوف نتائج التقييم: أي مستخدم دوره admin (مدير)، وكمان الشخص المحدد في FEEDBACK_RESULTS_USER
+ * حتى لو دوره مش مدير. النظام ده بيعرّف المستخدمين بالإيميل، مفيش username.
+ */
+export function canViewFeedbackResults(u: { email?: string | null; role?: string | null } | null | undefined, allowed?: string | null): boolean {
+  if (!u) return false;
+  return (!!u.role && RESULTS_ROLES.includes(u.role)) || isResultsUser(u.email, allowed);
 }
