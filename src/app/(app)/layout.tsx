@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { Shell } from "@/components/Shell";
+import FeedbackPrompt from "@/components/FeedbackPrompt";
 import { requirePageUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
@@ -17,5 +18,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     prisma.decisionLine.groupBy({ by: ["decisionId"], where: { decision: { status: "active", renewalStatus: "none" } }, _max: { endMonth: true } }),
   ]);
   const renew = soon.filter((g) => g._max.endMonth && g._max.endMonth >= cm && g._max.endMonth <= addMonths(cm, st.renewLead)).length;
-  return <Shell user={user} current={current} counts={{ my, late, renew }}>{children}</Shell>;
+  return (
+    <Shell user={user} current={current} counts={{ my, late, renew }}>
+      {children}
+      <FeedbackPrompt system="social" name="نظام الإدارة الاجتماعية" user={String(user.id)} />
+    </Shell>
+  );
 }
