@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { Shell } from "@/components/Shell";
 import FeedbackPrompt from "@/components/FeedbackPrompt";
 import { requirePageUser } from "@/lib/auth";
+import { isFeedbackViewer } from "@/lib/feedback-access";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { addMonths, currentMonth } from "@/lib/months";
@@ -21,7 +22,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <Shell user={user} current={current} counts={{ my, late, renew }}>
       {children}
-      <FeedbackPrompt system="social" name="نظام الإدارة الاجتماعية" user={String(user.id)} />
+      <FeedbackPrompt system="social" name="نظام الإدارة الاجتماعية" user={String(user.id)}
+        ready={!user.mustChangePassword} canViewResults={isFeedbackViewer(user)} />
     </Shell>
   );
 }

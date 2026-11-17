@@ -482,3 +482,24 @@ model Attachment {
   @@index([operationId])
   @@index([entitlementId])
 }
+
+// تقييم النظام (رسالة التقييم اللي بتظهر مرة واحدة للموظف) — رد واحد لكل مستخدم في كل حملة
+// الدرجات من 1 لـ 5 (CHECK في القاعدة). الاسم اختياري: اللي الموظف كتبه بنفسه
+model Feedback {
+  id         String   @id @default(cuid())
+  campaign   String // مثلاً eval-2026-11
+  userId     String
+  overall    Int // التقييم العام — إجباري
+  ease       Int? // سهولة الاستخدام
+  speed      Int? // السرعة والثبات
+  value      Int? // قد إيه سهّل الشغل
+  problems   String   @default("")
+  ideas      String   @default("")
+  department String
+  name       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([campaign, userId])
+  @@index([campaign, createdAt])
+}

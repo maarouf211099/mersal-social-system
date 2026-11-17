@@ -18,6 +18,7 @@ const LABELS: Record<string, string> = {
   line_corrected: "تصحيح خدمة في قرار", decision_corrected: "تصحيح بيانات قرار", transfer_corrected: "تصحيح تحويل", card_resent: "إعادة إرسال كارت", attachment_added: "رفع مرفق",
   import_decisions_sheet: "استيراد شيت القرارات", donation_flag: "علامة تحتاج لتبرع",
   service_created: "إضافة خدمة", service_updated: "تعديل خدمة", optype_saved: "نوع عملية", export: "تصدير", import_v1: "استيراد النظام السابق",
+  feedback_submitted: "تقييم النظام", feedback_results_viewed: "عرض نتائج تقييم النظام",
 };
 
 export default async function AuditPage({ searchParams }: { searchParams: SP }) {
