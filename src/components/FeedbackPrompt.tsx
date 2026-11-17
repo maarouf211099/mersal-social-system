@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 // رسالة تقييم النظام: بتظهر مرة واحدة لكل مستخدم بعد الدخول (الكود في public/mersal-feedback.js).
-// الرد بيتسجل في قاعدة النظام (POST /api/feedback). بعد UNTIL الرسالة مش بتظهر، والنتايج تفضل متاحة.
+// الرد بيتسجل في قاعدة النظام (POST /api/feedback). بعد UNTIL الرسالة مش بتظهر.
 const UNTIL = "2026-11-30";
 
 type Props = {
@@ -12,8 +12,6 @@ type Props = {
   user: string;
   /** المستخدم داخل ومش مطلوب منه يغيّر كلمة المرور */
   ready: boolean;
-  /** مرآة لفحص السيرفر (GET /api/feedback) — الحماية الحقيقية على السيرفر */
-  canViewResults: boolean;
 };
 
 /** طلب على نفس السيرفر بالكوكي بتاعة الجلسة — ولو فشل نرجّع رسالة السيرفر بالعربي */
@@ -29,7 +27,7 @@ async function call(url: string, init?: RequestInit): Promise<unknown> {
   return j;
 }
 
-export default function FeedbackPrompt({ system, name, user, ready, canViewResults }: Props) {
+export default function FeedbackPrompt({ system, name, user, ready }: Props) {
   useEffect(() => {
     const w = window as unknown as { MERSAL_FEEDBACK?: Record<string, unknown> };
     w.MERSAL_FEEDBACK = {
@@ -40,8 +38,7 @@ export default function FeedbackPrompt({ system, name, user, ready, canViewResul
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
       }),
       mine: async () => !!((await call("/api/feedback/mine")) as { submitted?: boolean } | null)?.submitted,
-      canViewResults: () => canViewResults,
-      results: async () => { const rows = await call("/api/feedback"); return Array.isArray(rows) ? rows : []; },
+      // من غير canViewResults/results: النتائج المجمعة لكل الأنظمة في صفحة واحدة جوه سيستم الحالات
     };
     if (!document.getElementById("mfb-js")) {
       const s = document.createElement("script");
@@ -50,8 +47,8 @@ export default function FeedbackPrompt({ system, name, user, ready, canViewResul
       s.defer = true;
       document.body.appendChild(s);
     }
-    // لما الصفحات دي تتقفل (خروج مثلاً) الرسالة وزرار النتايج يختفوا
-    return () => { if (w.MERSAL_FEEDBACK) w.MERSAL_FEEDBACK = { ...w.MERSAL_FEEDBACK, ready: () => false, canViewResults: () => false }; };
-  }, [system, name, user, ready, canViewResults]);
+    // لما الصفحات دي تتقفل (خروج مثلاً) الرسالة ماتظهرش
+    return () => { if (w.MERSAL_FEEDBACK) w.MERSAL_FEEDBACK = { ...w.MERSAL_FEEDBACK, ready: () => false }; };
+  }, [system, name, user, ready]);
   return null;
 }

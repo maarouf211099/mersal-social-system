@@ -5,6 +5,7 @@ import { audit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { FEEDBACK_CAMPAIGN, parseFeedback } from "@/lib/feedback";
 import { isFeedbackViewer } from "@/lib/feedback-access";
+import { exportFeedbackSnapshot, SNAPSHOT_SELECT } from "@/lib/feedback-snapshot";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,8 @@ export async function POST(req: NextRequest) {
     return err("حصلت مشكلة في حفظ التقييم، جرّب تاني.", 500);
   }
   await audit(u.id, "feedback_submitted", FEEDBACK_CAMPAIGN);
+  // تحديث الملف المشترك لصفحة النتائج المجمعة في سيستم الحالات — أي فشل بيتسجل تحذير بس
+  await exportFeedbackSnapshot(prisma);
   return NextResponse.json({ ok: true }, { headers: NO_STORE });
 }
 
@@ -48,7 +51,7 @@ export async function GET() {
   const rows = await prisma.feedback.findMany({
     where: { campaign: FEEDBACK_CAMPAIGN },
     orderBy: { createdAt: "desc" },
-    select: { createdAt: true, department: true, name: true, overall: true, ease: true, speed: true, value: true, problems: true, ideas: true },
+    select: SNAPSHOT_SELECT,
   });
   await audit(u.id, "feedback_results_viewed", FEEDBACK_CAMPAIGN, { rows: rows.length });
   return NextResponse.json(rows, { headers: NO_STORE });

@@ -1,6 +1,9 @@
 // تقييم النظام — التحقق من الرد وصلاحية عرض النتائج (منطق خالص من غير قاعدة، عشان يتختبر)
 
 export const FEEDBACK_CAMPAIGN = "eval-2026-11";
+/** مفتاح النظام واسمه (في رسالة التقييم وفي الملف المشترك اللي سيستم الحالات بيقراه) */
+export const FEEDBACK_SYSTEM = "social";
+export const FEEDBACK_SYSTEM_NAME = "نظام الإدارة الاجتماعية";
 /** الشخص الوحيد اللي يشوف النتائج: الجزء اللي قبل @ في إيميله (مش الإيميل كامل) */
 export const DEFAULT_RESULTS_USER = "mahmoud.maarouf";
 
