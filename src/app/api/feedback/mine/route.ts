@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { FEEDBACK_CAMPAIGN } from "@/lib/feedback";
 
 export const dynamic = "force-dynamic";
 
-/** هل المستخدم الحالي قيّم النظام قبل كده (من أي جهاز) */
+/**
+ * تقييم النظام اتشال. التبويبات اللي لسه فاتحة بالكود القديم بتسأل هنا كل شوية،
+ * ولو الرد مش "submitted" بتعرض الرسالة — فبنرد دايماً إنه قيّم عشان تبطّل وتسجّل ده عند المستخدم.
+ * الحملة كانت لحد 2026-11-30 — بعدها الكود القديم بيقف لوحده وينفع يتشال الملف ده.
+ */
 export async function GET() {
-  const u = await auth();
-  if (!u || u.mustChangePassword) return NextResponse.json({ error: "انتهت الجلسة. سجّل الدخول مرة أخرى." }, { status: 401, headers: { "Cache-Control": "no-store" } });
-  const row = await prisma.feedback.findUnique({
-    where: { campaign_userId: { campaign: FEEDBACK_CAMPAIGN, userId: u.id } },
-    select: { id: true },
-  });
-  return NextResponse.json({ submitted: !!row }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ ok: true, submitted: true, canViewResults: false }, { headers: { "Cache-Control": "no-store" } });
 }

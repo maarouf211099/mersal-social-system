@@ -1,8 +1,6 @@
 import { headers } from "next/headers";
 import { Shell } from "@/components/Shell";
-import FeedbackPrompt from "@/components/FeedbackPrompt";
 import { requirePageUser } from "@/lib/auth";
-import { FEEDBACK_SYSTEM, FEEDBACK_SYSTEM_NAME } from "@/lib/feedback";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { addMonths, currentMonth } from "@/lib/months";
@@ -22,7 +20,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <Shell user={user} current={current} counts={{ my, late, renew }}>
       {children}
-      <FeedbackPrompt system={FEEDBACK_SYSTEM} name={FEEDBACK_SYSTEM_NAME} user={String(user.id)} ready={!user.mustChangePassword} />
     </Shell>
   );
 }
