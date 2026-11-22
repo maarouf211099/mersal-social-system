@@ -17,7 +17,7 @@ const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 }, l
 const p = await ctx.newPage();
 const errors = [];
 p.on("pageerror", (e) => errors.push(`${e.message.slice(0, 60)} @ ${p.url().replace(BASE, "")}`));
-const go = (path) => p.goto(BASE + path, { waitUntil: "networkidle" });
+const go = async (path) => { await p.waitForLoadState("networkidle").catch(() => {}); return p.goto(BASE + path, { waitUntil: "networkidle" }); };
 const alertText = async () => { await p.waitForSelector(".alert.ok, .alert.bad", { timeout: 15000 }); return (await p.locator(".alert.ok, .alert.bad").last().innerText()).trim(); };
 const fb = () => p.evaluate(() => [...document.querySelectorAll(".alert.ok, .alert.bad")].map((x) => x.textContent).join("|"));
 /** يضغط الزرار ويستنى رسالة جديدة (مش الرسالة القديمة اللي كانت ظاهرة) */
@@ -70,8 +70,10 @@ await go(`/cycle?m=${month}`);
 await p.getByRole("button", { name: /^توليد استحقاقات/ }).click();
 ok((await alertText()).includes("تم توليد 1"), "توليد استحقاقات الشهر");
 await go(`/cycle?m=${month}`);
-ok(await p.locator("text=يحتاج تأكيد بيانات").count() > 0, "الحالة الجديدة: يحتاج تأكيد بيانات");
-ok(await p.getByRole("button", { name: "إرسال المحدد ضمن دفعة" }).isDisabled(), "الإرسال قبل تأكيد البيانات غير متاح");
+ok(await p.locator("text=بيانات استلام ناقصة").count() > 0, "الحالة الجديدة: بيانات استلام ناقصة");
+ok(await p.getByRole("button", { name: "إرسال المحدد ضمن دفعة" }).isDisabled(), "الإرسال والبيانات ناقصة غير متاح");
+await go(`/data?m=${month}`);
+ok(await p.locator("td", { hasText: "5001" }).count() > 0, "الحالة نزلت «استكمال البيانات»");
 
 // ── مكالمة التأكيد: بدون طريقة استلام مرفوضة، ثم كاملة
 await p.locator("a[href^='/cycle/c']").first().click();
@@ -79,10 +81,16 @@ await p.waitForURL(/\/cycle\/c/); await p.waitForLoadState("networkidle");
 const entUrl = p.url();
 await p.getByLabel("نتيجة المكالمة *").selectOption("updated");
 await p.getByLabel("هاتف", { exact: true }).fill("01012345678");
-ok((await submit("حفظ النتيجة")).includes("طريقة الاستلام"), "التأكيد بدون طريقة استلام مرفوض");
+ok((await submit("حفظ النتيجة")).includes("لسه ناقص"), "استكمال جزئي: بيتحفظ والحالة تفضل ناقصة");
+await p.goto(entUrl, { waitUntil: "networkidle" });
+await p.getByLabel("نتيجة المكالمة *").selectOption("updated");
+await p.getByLabel("اسم المستلم").fill("مستلم اختبار");
+await p.getByLabel("الرقم القومي / إثبات الشخصية").fill("29001011234567");
+await p.getByLabel("موقف الإقامة").selectOption("مصري");
+ok((await submit("حفظ النتيجة")).includes("طريقة الاستلام"), "المالي: طريقة الاستلام مطلوبة قبل الإرسال");
 await p.getByLabel("طريقة الاستلام").selectOption("محفظة إلكترونية");
 await p.getByLabel("رقم الاستلام / المحفظة").fill("01112345678");
-ok((await submit("حفظ النتيجة")).includes("تم تأكيد البيانات"), "تأكيد البيانات وتحديث MASTER");
+ok((await submit("حفظ النتيجة")).includes("اكتملت بيانات الاستلام"), "اكتمال البيانات وتحديث MASTER");
 
 // ── الإرسال في دفعة ثم التحويل
 await go(`/cycle?m=${month}`);
@@ -110,18 +118,12 @@ await p.locator("summary", { hasText: "تسجيل استرداد" }).click();
 await p.locator("details[open] select[name=reason]").selectOption("عدم الاستلام خلال المدة");
 ok((await submit("حفظ الاسترداد")).includes("كلي"), "الاسترداد الكلي");
 
-// ── الشهر التالي معلّق حتى اعتماد المشرف (ترحيل)
+// ── الشهر التالي: مش متعلّق على السابق، وبيتشغّل عليه عادي
 const next = addM(month, 1);
 await go(`/cycle?m=${next}`);
-await p.getByRole("button", { name: /^توليد استحقاقات/ }).click(); await p.waitForSelector(".alert.ok");
+await p.getByRole("button", { name: /^توليد استحقاقات/ }).click(); await p.waitForSelector(".alert.ok"); await p.waitForLoadState("networkidle");
 await go(`/cycle?m=${next}`);
-ok(await p.locator("text=معلّق على الشهر السابق").count() > 0, "الشهر التالي معلّق على الشهر السابق");
-await p.locator("a[href^='/cycle/c']").first().click(); await p.waitForURL(/\/cycle\/c/); await p.waitForLoadState("networkidle");
-await p.getByLabel("معالجة الشهر غير المستلم").selectOption("carry");
-await p.getByLabel("سبب الاعتماد *").fill("تم التواصل وتأكيد الاستمرار");
-ok((await submit("اعتماد")).includes("تم الاعتماد"), "اعتماد الإدراج");
-await p.waitForFunction(() => document.querySelector(".kv")?.textContent?.includes("2,000"), null, { timeout: 10000 }).catch(() => {});
-ok((await p.locator(".kv").first().innerText()).includes("2,000"), "الترحيل: القيمة = الشهري + غير المستلم");
+ok(await p.locator("text=معلّق على الشهر السابق").count() === 0 && await p.locator("text=مستحق للصرف").count() > 0, "الشهر التالي جاهز للإرسال (مفيش تعليق)");
 
 // ── لا استحقاق بعد نهاية القرار
 await go(`/cycle?m=${addM(month, 3)}`);
@@ -167,6 +169,15 @@ await submit("حفظ التحويل");
 for (let i = 1; i <= 3; i++) { await go(nextEnt); await submit("لم يرد"); }
 await go("/renewal?view=noreply");
 ok(await p.locator("td", { hasText: "5001" }).count() > 0, "قائمة عدم الرد لشهرين متتاليين");
+// ── قائمة الغلق: شهرين ورا بعض بدون رد → غلق الخدمة بسبب + شيت للإيميل
+await go("/closing");
+ok(await p.locator("td", { hasText: "5001" }).count() > 0, "الخدمة نزلت «قائمة الغلق»");
+const clx = await p.request.get(BASE + "/api/export/closing?format=xlsx");
+ok(clx.status() === 200 && (await clx.body())[0] === 0x50, "شيت المرشحة للغلق Excel");
+await p.locator('input[name="ids"]').first().check();
+ok((await submit("غلق الخدمة للمحدد")).includes("اتقفلت 1"), "غلق الخدمة بسبب");
+await go(`/closing?view=closed&m=${month}`);
+ok(await p.locator("td", { hasText: "5001" }).count() > 0, "الخدمة ظاهرة في «اتقفلت» للإثبات");
 await p.goto(entUrl, { waitUntil: "networkidle" });
 await p.locator("summary", { hasText: "تصحيح بيانات التحويل" }).click();
 await p.locator('details[open] input[name="ref"]').fill("TRX-777-A");
@@ -191,12 +202,14 @@ await p.locator('select[name="svc"]').nth(1).selectOption(await svcVal("كارت
 await p.locator('input[name="amount"]').nth(1).fill("600"); await p.locator('input[name="months"]').nth(1).fill("3");
 await p.getByRole("button", { name: "حفظ القرار" }).click(); await p.waitForURL(/cases\/5001\?saved/);
 await go(`/cycle?m=${month}`);
-await p.getByRole("button", { name: /^توليد استحقاقات/ }).click(); await p.waitForSelector(".alert.ok");
+await p.getByRole("button", { name: /^توليد استحقاقات/ }).click(); await p.waitForSelector(".alert.ok"); await p.waitForLoadState("networkidle");
+await go(`/cycle?m=${next}&kind=service`);
+ok(await p.locator("text=مؤجل من").count() > 0, "الشهر اللي ما اتبعتش بيظهر مؤجل في دفعة الشهر اللي بعده");
 await go(`/cycle?m=${month}&kind=service`);
 await p.locator('input[name="ids"]').first().check();
-await submit("تم التنفيذ للمحدد");
-await go(`/cycle?m=${month}&kind=service`);
-ok(await p.locator("text=تم التنفيذ").count() > 0, "تنفيذ خدمة غير شهرية (سكن) وتسجيلها");
+ok((await submit("تم التنفيذ للمحدد")).includes("نزلت المتابعة"), "تنفيذ خدمة (سكن) ونزولها المتابعة");
+await go(`/follow?m=${month}`);
+ok(await p.locator("td", { hasText: "سكن" }).count() > 0, "أي خدمة اتبعتت ظاهرة في المتابعة");
 await go(`/cycle?m=${month}&kind=card`);
 await p.locator('input[name="ids"]').first().check();
 await submit("تم إرسال الكارت للمحدد");

@@ -31,7 +31,8 @@ export default async function CyclePage({ searchParams }: { searchParams: SP }) 
   const counts: Partial<Record<Stage, number>> = {};
   filtered.forEach((e) => (counts[e.stage] = (counts[e.stage] ?? 0) + 1));
   const list = filtered.filter((e) => !stage || e.stage === stage);
-  const missingN = all.filter((e) => e.missing.length).length;
+  const missingN = all.filter((e) => e.stage === "missing").length;
+  const deferredN = all.filter((e) => e.month !== m).length;
   const sendable = list.filter((e) => canSend(e.stage)).length;
   const transferable = list.filter((e) => e.kind === "financial" && e.sentAt && !e.transfer && !e.stoppedAt).length;
   const today = new Date().toISOString().slice(0, 10);
@@ -60,7 +61,8 @@ export default async function CyclePage({ searchParams }: { searchParams: SP }) 
         <Link href={`/cycle${qs(base)}`} aria-current={!stage ? "page" : undefined}>الكل <b>{filtered.length}</b></Link>
         {(Object.keys(STAGES) as Stage[]).filter((s) => counts[s]).map((s) => <Link key={s} href={`/cycle${qs({ ...base, stage: s })}`} aria-current={stage === s ? "page" : undefined}>{STAGES[s].label} <b>{counts[s]}</b></Link>)}
       </div>
-      {missingN > 0 && !data && <div className="alert warn"><Icon.alert /><span>{missingN} حالة بيانات الاستلام بتاعتها ناقصة (اسم المستلم، الرقم القومي، طريقة الاستلام، موقف الإقامة أو تاريخ انتهائها). <Link className="strong" href={`/cycle${qs({ ...base, data: "missing" })}`}>عرضها</Link></span></div>}
+      {missingN > 0 && !data && <div className="alert warn"><Icon.alert /><span>{missingN} استحقاق بيانات الاستلام بتاعته ناقصة (الهاتف، اسم المستلم، الرقم القومي، موقف الإقامة أو تاريخ انتهائها) — مش هيتبعت لحد ما يكمل. <Link className="strong" href={`/data${qs({ m })}`}>«استكمال البيانات»</Link></span></div>}
+      {deferredN > 0 && <div className="alert"><Icon.clock /><span>{deferredN} استحقاق مؤجل من شهور سابقة ما اتبعتش — ظاهر هنا بعلامة «مؤجل» وتقدر تبعته مع دفعة {fmtMonth(m)}.</span></div>}
       <ActionForm action={cycleBulk} resetOnOk>
         <input type="hidden" name="m" value={m} />
         <div className="card">
@@ -87,7 +89,7 @@ export default async function CyclePage({ searchParams }: { searchParams: SP }) 
             {list.slice(0, 800).map((e) => (
               <tr key={e.id} className={e.missing.length ? "row-warn" : undefined}>
                 <td><input type="checkbox" name="ids" value={e.id} aria-label="تحديد" /></td>
-                <td className="nowrap"><Link className="strong num" href={`/cases/${encodeURIComponent(e.caseCode)}`}>{e.caseCode}</Link></td>
+                <td className="nowrap"><Link className="strong num" href={`/cases/${encodeURIComponent(e.caseCode)}`}>{e.caseCode}</Link>{e.month !== m && <span className="cell-sub"><Badge tone="warn">مؤجل من {fmtMonth(e.month)}</Badge></span>}</td>
                 <td className="nowrap">{e.case.name}</td>
                 <td><span className="num">{e.case.phone || "—"}</span></td>
                 <td style={{ minWidth: 130 }}>{e.case.recvName || <Miss />}{e.case.recvMethod && <span className="cell-sub">{e.case.recvMethod}{e.case.recvPhone ? ` · ${e.case.recvPhone}` : ""}</span>}</td>

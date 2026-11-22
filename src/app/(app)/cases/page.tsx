@@ -102,7 +102,7 @@ export default async function CasesPage({ searchParams }: { searchParams: SP }) 
                     {lines.length === 0 ? (
                       <tr>{caseCells}<td colSpan={6} className="muted">لا توجد قرارات{hasLineFilter ? " بهذه الفلاتر" : ""}</td>{tailCells}</tr>
                     ) : lines.map(({ d, l }, i) => {
-                      const st = lineStatus(d.status, l.endMonth, cm);
+                      const st = l.stoppedAt ? "stopped" : lineStatus(d.status, l.endMonth, cm);
                       return (
                         <tr key={l.id}>
                           {i === 0 && caseCells}

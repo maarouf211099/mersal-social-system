@@ -10,14 +10,16 @@ import { NavProgress } from "./NavProgress";
 
 type NavItem = { href: string; label: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.JSX.Element; count?: number };
 
-export function Shell({ user, current, counts, children }: { user: AppUser; current: string; counts: { my: number; late: number; renew: number }; children: React.ReactNode }) {
+export function Shell({ user, current, counts, children }: { user: AppUser; current: string; counts: { my: number; late: number; renew: number; data?: number }; children: React.ReactNode }) {
   const initial = user.name.trim().charAt(0) || "م";
   const main: NavItem[] = [
     { href: "/", label: "لوحة المتابعة", icon: Icon.home },
     { href: "/my", label: "مهامي", icon: Icon.inbox, count: counts.my },
     { href: "/cases", label: "الحالات والقرارات", icon: Icon.folder },
+    { href: "/data", label: "استكمال البيانات", icon: Icon.user, count: counts.data },
     { href: "/cycle", label: "دورة الصرف", icon: Icon.wallet },
     { href: "/follow", label: "المتابعة", icon: Icon.phone },
+    { href: "/closing", label: "قائمة الغلق", icon: Icon.alert },
     { href: "/refunds", label: "الاستردادات", icon: Icon.undo },
     { href: "/renewal", label: "التجديد والانتهاء", icon: Icon.refresh, count: counts.renew },
     { href: "/tasks", label: "توزيع المهام", icon: Icon.tasks, count: counts.late },

@@ -4,8 +4,22 @@ import { prisma } from "./prisma";
 import { loadEnts, type Ent } from "./entitlements";
 import { getSettings } from "./settings";
 import { STAGES, type Stage } from "./stage";
-import { fmtMonth } from "./months";
+import { addMonths, fmtMonth } from "./months";
 import { fmtTs } from "./format";
+
+/**
+ * استحقاقات الشهر + المؤجل: أي شهر سابق (لحد 3 شهور) ما اتبعتش ولا اتوقف، والخدمة لسه شغالة —
+ * بيظهر في دفعة الشهر الجديد ويتشغّل عليه هو والشهر الجديد عادي.
+ */
+export function monthWithDeferred(m: string): Prisma.EntitlementWhereInput {
+  return {
+    OR: [
+      { month: m },
+      { month: { lt: m, gte: addMonths(m, -3) }, sentAt: null, legacySent: false, stoppedAt: null,
+        line: { stoppedAt: null, decision: { status: { in: ["active", "ended"] } } } },
+    ],
+  };
+}
 
 export type CycleFilter = { m: string; kind: string; svc?: string; stage?: string; q?: string; batch?: string; data?: string };
 
@@ -14,7 +28,7 @@ export async function cycleList(f: CycleFilter) {
   const st = await getSettings();
   const where: Prisma.EntitlementWhereInput = f.batch
     ? { batchId: f.batch }
-    : { month: f.m, line: { service: { kind: f.kind as any, ...(f.svc ? { id: f.svc } : {}) } } };
+    : { AND: [monthWithDeferred(f.m), { line: { service: { kind: f.kind as any, ...(f.svc ? { id: f.svc } : {}) } } }] };
   const all = await loadEnts(where, st.followDays);
   const q = (f.q ?? "").trim();
   const list = all.filter((e) =>
@@ -24,12 +38,12 @@ export async function cycleList(f: CycleFilter) {
   return { all, list };
 }
 
-export const CYCLE_HEADS = ["الكود", "الاسم", "رقم الهاتف", "اسم المستلم", "الرقم القومي", "موقف الإقامة", "تاريخ انتهاء الإقامة", "الخدمة", "التكلفة", "القرار", "تاريخ بداية القرار", "تاريخ نهاية القرار",
+export const CYCLE_HEADS = ["شهر الاستحقاق", "الكود", "الاسم", "رقم الهاتف", "اسم المستلم", "الرقم القومي", "موقف الإقامة", "تاريخ انتهاء الإقامة", "الخدمة", "التكلفة", "القرار", "تاريخ بداية القرار", "تاريخ نهاية القرار",
   "المستفيد", "طريقة الاستلام", "رقم الاستلام / المحفظة", "رقم القرار", "حالة البيانات", "الموقف", "الدفعة", "تاريخ الإرسال"];
 
 export function cycleRow(e: Ent, batchCode = ""): (string | number)[] {
   return [
-    e.caseCode, e.case.name, e.case.phone, e.case.recvName, e.case.recvIdNo, e.case.residencyStatus, e.case.residencyExpiry,
+    fmtMonth(e.month), e.caseCode, e.case.name, e.case.phone, e.case.recvName, e.case.recvIdNo, e.case.residencyStatus, e.case.residencyExpiry,
     e.serviceName, e.amountN, e.line.decision.text, fmtMonth(e.line.startMonth), fmtMonth(e.line.endMonth),
     e.line.beneficiary, e.case.recvMethod, e.case.recvPhone, e.line.decision.no,
     e.missing.length ? `ناقصة: ${e.missing.join("، ")}` : "مكتملة", STAGES[e.stage as Stage].label, batchCode, e.sentAt ? fmtTs(e.sentAt) : "",

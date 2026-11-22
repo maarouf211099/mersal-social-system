@@ -148,3 +148,35 @@ export async function endingBulk(p: State, f: FormData): Promise<State> {
   else return { error: "اختار الإجراء." };
   return stopDecisions(p, fd);
 }
+
+/** غلق خدمة (سطر في قرار) لوحدها بسبب — من «قائمة الغلق». لو كل خدمات القرار اتقفلت، القرار نفسه بيتوقف */
+export async function closeLines(_p: State, f: FormData): Promise<State> {
+  return run("decision.stop", async (u) => {
+    const ids = strs(f, "ids");
+    const reason = str(f, "reason");
+    if (!ids.length) fail("حدد خدمة واحدة على الأقل.");
+    if (!reason) fail("اكتب سبب الغلق.");
+    let n = 0;
+    await prisma.$transaction(async (tx) => {
+      for (const id of ids) {
+        const l = await tx.decisionLine.findUnique({ where: { id }, include: { service: true, decision: { include: { lines: true } } } });
+        if (!l || l.stoppedAt) continue;
+        await tx.decisionLine.update({ where: { id }, data: { stoppedAt: new Date(), stoppedById: u.id, stopReason: reason } });
+        // كل اللي ما اتبعتش من الخدمة دي (المؤجل والحالي) بيتوقف، ومهامه بتتلغي
+        const ents = await tx.entitlement.findMany({ where: { lineId: id, sentAt: null, legacySent: false, stoppedAt: null }, select: { id: true } });
+        if (ents.length) {
+          await tx.entitlement.updateMany({ where: { id: { in: ents.map((e) => e.id) } }, data: { stoppedAt: new Date(), stoppedReason: reason } });
+          await tx.task.updateMany({ where: { entitlementId: { in: ents.map((e) => e.id) }, status: { in: ["new", "in_progress", "stuck"] } }, data: { status: "cancelled", result: `أُلغيت: غلق الخدمة · ${reason}` } });
+        }
+        const others = l.decision.lines.filter((x) => x.id !== id && !x.stoppedAt);
+        if (!others.length && l.decision.status === "active") {
+          await tx.decision.update({ where: { id: l.decisionId }, data: { status: "stopped", stopReason: reason, stoppedAt: new Date(), stoppedById: u.id } });
+        }
+        await logOp(tx, u.id, AUTO_OPS.closeDecision, { caseCode: l.caseCode, result: `غلق خدمة ${l.service.name} · ${l.decision.no} · ${reason}`, ref: id });
+        n++;
+      }
+      await logAudit(tx, u.id, "lines_closed", `${n} خدمة`, { reason, ids });
+    });
+    return `اتقفلت ${n} خدمة. نزّل شيت «اتقفلت هذا الشهر» وابعته في الإيميل للإثبات.`;
+  });
+}

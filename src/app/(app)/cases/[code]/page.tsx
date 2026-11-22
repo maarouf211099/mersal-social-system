@@ -91,7 +91,7 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
                 <td className="nowrap">{money(l.amount)} ج</td>
                 <td className="nowrap date-cell">{fmtMonth(l.startMonth)}</td>
                 <td className="nowrap date-cell">{fmtMonth(l.endMonth)}{l.extendedBy ? <span className="cell-sub">مُدد {l.extendedBy}</span> : null}</td>
-                <td className="nowrap">{l.months} شهر</td>
+                <td className="nowrap">{l.months} شهر{l.stoppedAt && <span className="cell-sub"><Badge tone="bad">الخدمة اتقفلت</Badge> {l.stopReason}</span>}</td>
                 <td className="nowrap">{first && <><Badge tone={stt === "active" ? "ok" : stt === "ended" ? "" : "bad"}>{DEC_STATUS_LABELS[stt]}</Badge>{d.stopReason && <span className="cell-sub">{d.stopReason}</span>}{d.needsDonation && <span className="cell-sub"><Badge tone="warn">تحتاج لتبرع</Badge></span>}</>}</td>
                 <td>{first && (d.renewalStatus !== "none" ? <Badge tone="info">{RENEWAL_LABELS[d.renewalStatus]}</Badge> : "—")}</td>
                 <td>{first && can(u.role, "decision") && <Link className="btn secondary small" href={`/decisions/new?renew=${d.id}`}>تجديد</Link>}</td>

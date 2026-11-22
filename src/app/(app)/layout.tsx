@@ -11,14 +11,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const st = await getSettings();
   const now = new Date();
   const cm = currentMonth();
-  const [my, late, soon] = await Promise.all([
+  const [my, late, soon, data] = await Promise.all([
     prisma.task.count({ where: { assigneeId: user.id, status: { in: ["new", "in_progress"] } } }),
     prisma.task.count({ where: { status: { in: ["new", "in_progress"] }, dueAt: { lt: now } } }),
     prisma.decisionLine.groupBy({ by: ["decisionId"], where: { decision: { status: "active", renewalStatus: "none" } }, _max: { endMonth: true } }),
+    prisma.task.count({ where: { kind: "confirm", status: { in: ["new", "in_progress", "stuck"] } } }), // استكمال البيانات المفتوح
   ]);
   const renew = soon.filter((g) => g._max.endMonth && g._max.endMonth >= cm && g._max.endMonth <= addMonths(cm, st.renewLead)).length;
   return (
-    <Shell user={user} current={current} counts={{ my, late, renew }}>
+    <Shell user={user} current={current} counts={{ my, late, renew, data }}>
       {children}
     </Shell>
   );

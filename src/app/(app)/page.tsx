@@ -31,7 +31,8 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const soon = renewSoon.filter((g) => g._max.endMonth! >= cm && g._max.endMonth! <= addMonths(cm, st.renewLead)).length;
   const ended = endedOpen.filter((g) => g._max.endMonth! < cm).length;
   const alerts: [string, string, string][] = [];
-  if (M.stages.needconf) alerts.push(["warn", `${M.stages.needconf} حالة جديدة تحتاج مكالمة تأكيد بيانات قبل الإرسال`, `/cycle?m=${m}&stage=needconf`]);
+  if (M.stages.missing) alerts.push(["bad", `${M.stages.missing} استحقاق بيانات الاستلام بتاعه ناقصة — مش هيتبعت لحد ما يكمل`, `/data?m=${m}`]);
+  if (M.stages.needconf) alerts.push(["warn", `${M.stages.needconf} حالة جديدة تحتاج مكالمة تأكيد بيانات قبل الإرسال`, `/data?m=${m}&view=needconf`]);
   if (M.stages.hold) alerts.push(["warn", `${M.stages.hold} استحقاق معلّق لأن الشهر السابق لم يُستلم — يحتاج اعتماد المشرف`, `/cycle?m=${m}&stage=hold`]);
   if (M.lateNow) alerts.push(["bad", `${M.lateNow} مهمة متأخرة عن موعدها`, "/tasks?view=late"]);
   if (soon) alerts.push(["warn", `${soon} قرار ينتهي خلال ${st.renewLead} شهر ولم يُرسل للتجديد`, "/renewal"]);

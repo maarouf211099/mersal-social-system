@@ -29,6 +29,7 @@ function enrich(e: Raw, prevResolved: boolean | null, followDays: number): Ent {
     kind, needsFollow: e.line.service.needsFollow, amount: amountN, needsConfirm: e.needsConfirm, confirmedAt: e.confirmedAt,
     holdApprovedAt: e.holdApprovedAt, sentAt: e.sentAt, legacySent: e.legacySent, followResult: e.followResult,
     stuckReason: e.stuckReason, stoppedAt: e.stoppedAt, transfer, refundTotal, unanswered, prevResolved, followDays,
+    missing: recvMissing(e.case).length > 0,
   });
   const transferred = transferredAmount({ transfer, legacySent: e.legacySent, kind, amount: amountN });
   return {

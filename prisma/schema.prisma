@@ -176,6 +176,9 @@ model DecisionLine {
   beneficiary  String        @default("") // المستفيد لو غير صاحب الملف (أسرة فيها أكثر من مستفيد)
   category     String        @default("") // تصنيف (مثلاً حفاضات: مرضية / عادية)
   note         String        @default("")
+  stoppedAt    DateTime? // غلق الخدمة لوحدها (مثلاً عدم الوصول للحالة شهرين)
+  stoppedById  String?
+  stopReason   String        @default("")
   decision     Decision      @relation(fields: [decisionId], references: [id])
   service      Service       @relation(fields: [serviceId], references: [id])
   entitlements Entitlement[]

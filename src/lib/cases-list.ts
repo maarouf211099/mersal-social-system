@@ -113,7 +113,7 @@ export async function casesSheet(f: CaseFilter) {
       const pl = byLine.get(l.id);
       rows.push([
         ...caseCols,
-        d.no, fmtDate(d.issueDate), d.donor, d.text, DEC_STATUS_LABELS[lineStatus(d.status, l.endMonth, cm)], d.stopReason, d.needsDonation ? "نعم" : "", RENEWAL_LABELS[d.renewalStatus],
+        d.no, fmtDate(d.issueDate), d.donor, d.text, DEC_STATUS_LABELS[l.stoppedAt ? "stopped" : lineStatus(d.status, l.endMonth, cm)], l.stopReason || d.stopReason, d.needsDonation ? "نعم" : "", RENEWAL_LABELS[d.renewalStatus],
         l.service.name, l.beneficiary, l.category, Number(l.amount), l.months, fmtMonth(l.startMonth), fmtMonth(l.endMonth), l.extendedBy || "",
         pl?.n ?? 0, pl?.last ? fmtMonth(pl.last) : "",
         ...tail,

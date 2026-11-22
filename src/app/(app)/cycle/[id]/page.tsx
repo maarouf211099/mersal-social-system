@@ -71,11 +71,12 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
       </div>
 
       {/* ── الإجراء المطلوب حسب المرحلة ── */}
-      {e.stage === "needconf" && can(u.role, "confirm") && (
-        <div className="card"><div className="card-title"><h2>مكالمة تأكيد البيانات</h2></div>
+      {(e.stage === "needconf" || e.stage === "missing") && can(u.role, "confirm") && (
+        <div className="card"><div className="card-title"><h2>{e.stage === "missing" ? "مكالمة استكمال بيانات الاستلام" : "مكالمة تأكيد البيانات"}</h2></div>
+          {e.missing.length > 0 && <div className="alert warn">ناقص: <b>{e.missing.join("، ")}</b>. الحالة مش هتتبعت ولا هتنزل المتابعة لحد ما تكمل.</div>}
           <ActionForm action={confirmData}>
             <input type="hidden" name="entId" value={e.id} />
-            <label className="field" style={{ maxWidth: 320 }}><span>نتيجة المكالمة *</span><select name="result" required defaultValue=""><option value="">اختار</option><option value="confirmed">تم الرد وتأكيد البيانات</option><option value="updated">تم الرد وتحديث البيانات</option><option value="no_answer">لم يرد</option></select></label>
+            <label className="field" style={{ maxWidth: 320 }}><span>نتيجة المكالمة *</span><select name="result" required defaultValue=""><option value="">اختار</option><option value="updated">تم الرد وتحديث / استكمال البيانات</option><option value="confirmed">تم الرد وتأكيد البيانات</option><option value="no_answer">لم يرد</option></select></label>
             <CaseFields c={c} part="receive" />
             <label className="field"><span>ملاحظات المكالمة</span><textarea name="note" /></label>
             <p className="muted">البيانات اللي تتعدل هنا تتحدث في ملف الحالة، والقيمة القديمة تتحفظ في سجل التعديلات. للمالي: الهاتف وطريقة الاستلام (ورقم المحفظة) إلزامية. لو اسم المستلم أو الرقم القومي أو موقف الإقامة لسه ناقص، الحالة هتفضل معلّمة «بيانات ناقصة» في الدفعة.</p>

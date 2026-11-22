@@ -8,6 +8,8 @@ import { fmtDate, fmtDur, fmtTs, pct } from "./format";
 import { userNames } from "./users";
 import { cycleList, cycleRow, CYCLE_HEADS, batchCodes } from "./cycle-list";
 import { casesSheet, readCaseFilter } from "./cases-list";
+import { closedLines, closingCandidates, closingSheet } from "./closing";
+import { dataList } from "./data-list";
 
 const KIND_LABELS: Record<string, string> = { financial: "مالي", card: "كارت", in_kind: "عيني", service: "خدمات" };
 import { RENEWAL_LABELS, OP_STATUS_LABELS } from "./constants";
@@ -16,6 +18,23 @@ import { RENEWAL_LABELS, OP_STATUS_LABELS } from "./constants";
 export async function exportRows(kind: string, m: string, f: Filter, extra: Record<string, string>): Promise<{ name: string; rows: (string | number)[][]; title?: string }> {
   const st = await getSettings();
   const names = await userNames();
+  if (kind === "data") {
+    const view = extra.view || "all";
+    const rows = (await dataList(m)).filter((r) => view === "all" || (view === "noans" ? r.tries >= 3 : r.stage === view && r.tries < 3));
+    return { name: `استكمال-البيانات-${m}`, title: `مؤسسة مرسال · الإدارة الاجتماعية — استكمال بيانات الاستلام · ${fmtMonth(m)} · ${rows.length} حالة`,
+      rows: [["الكود", "الاسم", "رقم الهاتف", "الناقص", "الخدمات", "محاولات بدون رد", "آخر محاولة", "المسؤول"],
+        ...rows.map((r) => [r.code, r.name, r.phone, r.missing.join("، ") || "محتاجة تأكيد", r.ents.map((e) => e.serviceName + (e.month !== m ? ` (مؤجل ${fmtMonth(e.month)})` : "")).join(" + "), r.tries, r.lastTry ? fmtTs(r.lastTry) : "", r.assignee ? names.name(r.assignee) : ""])] };
+  }
+  if (kind === "closing") {
+    if (extra.view === "closed") {
+      const ls = await closedLines(m);
+      return { name: `خدمات-اتقفلت-${m}`, title: `مؤسسة مرسال · الإدارة الاجتماعية — خدمات اتقفلت في ${fmtMonth(m)} · ${ls.length}`,
+        rows: [["الكود", "الاسم", "رقم الهاتف", "الخدمة", "المستفيد", "رقم القرار", "نص القرار", "سبب الغلق", "قفلها", "وقت الغلق"],
+          ...ls.map((l) => [l.caseCode, l.decision.case.name, l.decision.case.phone, l.service.name, l.beneficiary, l.decision.no, l.decision.text, l.stopReason, names.name(l.stoppedById), fmtTs(l.stoppedAt)])] };
+    }
+    const rows = await closingCandidates();
+    return { name: `مرشحة-للغلق-${currentMonth()}`, title: `مؤسسة مرسال · الإدارة الاجتماعية — خدمات مرشحة للغلق (عدم الوصول للحالة شهرين) · ${rows.length}`, rows: closingSheet(rows) };
+  }
   if (kind === "cases") {
     const cf = readCaseFilter((k) => extra[k] ?? "");
     const { rows, cases } = await casesSheet(cf);

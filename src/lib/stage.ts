@@ -1,11 +1,12 @@
 // مرحلة الاستحقاق — تُحسب من البيانات ولا تُخزّن، فلا يمكن أن تتناقض معها
 export type Stage =
-  | "due" | "hold" | "needconf" | "conf" | "sent" | "trans" | "wait" | "noans"
+  | "due" | "hold" | "missing" | "needconf" | "conf" | "sent" | "trans" | "wait" | "noans"
   | "recv" | "deliv" | "notpaid" | "stuck" | "refund" | "stop";
 
 export const STAGES: Record<Stage, { label: string; tone: "" | "ok" | "warn" | "bad" | "info" }> = {
   due: { label: "مستحق للصرف", tone: "" },
   hold: { label: "معلّق على الشهر السابق", tone: "warn" },
+  missing: { label: "بيانات استلام ناقصة", tone: "bad" },
   needconf: { label: "يحتاج تأكيد بيانات", tone: "warn" },
   conf: { label: "تم تأكيد البيانات", tone: "info" },
   sent: { label: "تم الإرسال", tone: "info" },
@@ -41,6 +42,7 @@ export type StageInput = {
   unanswered: number; // محاولات متابعة بدون رد (غير الملغاة)
   prevResolved: boolean | null; // الشهر السابق لنفس الخدمة: null = لا يوجد
   followDays: number;
+  missing?: boolean; // بيانات الاستلام ناقصة: مفيش إرسال ولا متابعة ولا استلام لحد ما تكمل
   now?: Date;
 };
 
@@ -64,17 +66,18 @@ export function stageOf(e: StageInput): Stage {
   if (e.followResult === "no_answer") return "noans";
   if (e.followResult === "not_received") return "notpaid";
   if (e.stuckReason) return "stuck";
+  if (e.missing && !e.legacySent) return "missing";
   if (e.sentAt || e.legacySent) {
     if (!follow) return "deliv";
     if (e.unanswered > 0) return "noans";
     if (e.kind === "financial") {
-      if (!e.transfer && !e.legacySent) return "sent";
+      if (!e.transfer && !e.legacySent) return e.unanswered > 0 ? "noans" : "sent";
       if (!e.transfer) return "wait";
       return now.getTime() - e.transfer.date.getTime() >= e.followDays * 864e5 ? "wait" : "trans";
     }
     return "wait";
   }
-  if (!e.holdApprovedAt && e.prevResolved === false) return "hold";
+  // الشهر اللي ما اتبعتش بيتأجل للدفعة اللي بعدها ويتشغّل عليه هو والشهر الجديد عادي (مفيش تعليق)
   if (e.needsConfirm) return e.confirmedAt ? "conf" : "needconf";
   return "due";
 }
@@ -82,7 +85,8 @@ export function stageOf(e: StageInput): Stage {
 /** الشهر «مُنتهٍ» لأغراض إدراج الشهر التالي: استُلم، أو أُوقف، أو تمت تسويته */
 export const isResolved = (s: Stage, settled: boolean) => FINAL.includes(s) || s === "stop" || settled;
 export const canSend = (s: Stage) => s === "due" || s === "conf";
-export const canFollow = (s: Stage) => s === "trans" || s === "wait" || s === "noans";
+/** المتابعة بتبدأ أول ما الخدمة تتبعت (أي خدمة) — والبيانات الناقصة بتمنعها (مرحلة missing) */
+export const canFollow = (s: Stage) => s === "sent" || s === "trans" || s === "wait" || s === "noans";
 
 /** المبلغ الذي وصل للمستفيد فعلاً */
 export function netReceived(s: Stage, transferred: number, amount: number, refundTotal: number) {

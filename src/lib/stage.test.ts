@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { stageOf, type StageInput, isResolved, canSend } from "./stage.ts";
+import { stageOf, type StageInput, isResolved, canSend, canFollow } from "./stage.ts";
 import { addMonths, spanMonths, suggestStart, fmtMonth } from "./months.ts";
 
 const base: StageInput = {
@@ -15,10 +15,20 @@ test("حالة جديدة تحتاج تأكيد ولا يمكن إرسالها",
   assert.equal(s, "needconf"); assert.equal(canSend(s), false);
   assert.equal(stageOf({ ...base, needsConfirm: true, confirmedAt: d("2026-11-02") }), "conf");
 });
-test("الشهر السابق غير المستلم يعلّق الشهر الحالي حتى الاعتماد", () => {
-  assert.equal(stageOf({ ...base, prevResolved: false }), "hold");
-  assert.equal(stageOf({ ...base, prevResolved: false, holdApprovedAt: d("2026-11-01") }), "due");
+test("الشهر المؤجل مش بيعلّق الشهر الجديد — الاتنين يتشغّل عليهم عادي", () => {
+  assert.equal(stageOf({ ...base, prevResolved: false }), "due");
   assert.equal(stageOf({ ...base, prevResolved: true }), "due");
+});
+test("بيانات الاستلام الناقصة بتقفل الإرسال والمتابعة", () => {
+  const s = stageOf({ ...base, missing: true });
+  assert.equal(s, "missing"); assert.equal(canSend(s), false); assert.equal(canFollow(s), false);
+  assert.equal(stageOf({ ...base, missing: true, sentAt: d("2026-11-05") }), "missing");
+  assert.equal(stageOf({ ...base, missing: true, needsConfirm: true }), "missing");
+  assert.equal(stageOf({ ...base, missing: true, followResult: "received", sentAt: d("2026-11-05") }), "recv");
+});
+test("المتابعة بتبدأ أول ما الخدمة تتبعت", () => {
+  assert.equal(canFollow(stageOf({ ...base, sentAt: d("2026-11-05") })), true);
+  assert.equal(stageOf({ ...base, sentAt: d("2026-11-05"), unanswered: 1 }), "noans");
 });
 test("الإرسال ثم التحويل لا يعني الاستلام", () => {
   assert.equal(stageOf({ ...base, sentAt: d("2026-11-05") }), "sent");
