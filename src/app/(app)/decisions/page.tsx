@@ -36,8 +36,7 @@ export default async function DecisionsPage({ searchParams }: { searchParams: SP
   return (
     <>
       <PageHead title="الحالات والقرارات" sub="كل قرار له خدمة أو أكثر بمدة وقيمة. القرار المستمر الذي انتهت مدته يظهر «منتهي» تلقائياً.">
-        {can(u.role, "case") && <Link className="btn secondary" href="/cases/new"><Icon.plus /> حالة جديدة</Link>}
-        {can(u.role, "decision") && <Link className="btn primary" href="/decisions/new"><Icon.plus /> قرار جديد</Link>}
+        {can(u.role, "decision") && <Link className="btn primary" href="/decisions/new"><Icon.plus /> تسجيل كود وقرار</Link>}
       </PageHead>
       <CasesTabs current="decisions" />
       <form className="toolbar">

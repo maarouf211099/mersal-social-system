@@ -26,7 +26,7 @@ export default async function NewDecisionPage({ searchParams }: { searchParams: 
   }
   return (
     <>
-      <PageHead title={renewId ? "تجديد قرار" : "قرار جديد"} sub="إذا كان الكود جديداً تُسجَّل الحالة تلقائياً بالاسم، وتُستكمل باقي بياناتها لاحقاً من ملف الحالة." />
+      <PageHead title={renewId ? "تجديد قرار" : "تسجيل كود وقرار"} sub="اكتب الكود: لو مسجل قبل كده بياناته بتظهر تلقائياً، ولو جديد بيتسجل بالاسم. بيانات الاستلام بتكمل في «استكمال البيانات»، والقرار بيطلع للصرف من الشهر المحدد." />
       <div className="card">
         <DecisionForm services={services.map((s) => ({ id: s.id, name: s.name, kind: s.kind, cycle: s.cycle }))}
           cases={cases.map((c) => ({ ...c, running: running.get(c.code) ?? [], beneficiaries: benMap.get(c.code) ?? [] }))} init={init} canOverride={can(u.role, "decision.override")} />

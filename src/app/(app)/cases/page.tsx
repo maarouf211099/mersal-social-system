@@ -37,8 +37,7 @@ export default async function CasesPage({ searchParams }: { searchParams: SP }) 
   return (
     <>
       <PageHead title="الحالات والقرارات" sub="البيانات الأساسية وبيانات الاستلام وكل قرار بخدمته ونصه وبدايته ونهايته وملخص الصرف">
-        {can(u.role, "case") && <Link className="btn secondary" href="/cases/new"><Icon.plus /> حالة جديدة</Link>}
-        {can(u.role, "decision") && <Link className="btn primary" href="/decisions/new"><Icon.plus /> قرار جديد</Link>}
+        {can(u.role, "decision") && <Link className="btn primary" href="/decisions/new"><Icon.plus /> تسجيل كود وقرار</Link>}
       </PageHead>
       <CasesTabs current="cases" />
       <form className="toolbar filters">
@@ -64,7 +63,7 @@ export default async function CasesPage({ searchParams }: { searchParams: SP }) 
         {total > 0 && <a className="btn secondary" href={`/api/export/cases${qs({ ...filt, format: "xlsx" })}`} title="كل بيانات الحالة (حتى اللي مش ظاهرة هنا) + كل قرار وخدمة + ملخص الصرف"><Icon.download /> تصدير Excel (كل البيانات)</a>}
       </div>
       <div className="card">
-        {rows.length === 0 ? <div className="empty">{total || anyFilter ? "لا نتائج بهذه الفلاتر." : "لا توجد حالات بعد. سجّل أول قرار من «قرار جديد» وهيتسجل الكود تلقائياً."}</div> : (
+        {rows.length === 0 ? <div className="empty">{total || anyFilter ? "لا نتائج بهذه الفلاتر." : "لا توجد حالات بعد. ابدأ بـ«تسجيل كود وقرار»."}</div> : (
           <div className="table-wrap wide">
             <table className="grouped">
               <thead><tr><th>الحالة</th><th>البيانات الأساسية</th><th>بيانات الاستلام</th><th>الخدمة</th><th>نص القرار</th><th>القيمة</th><th>البداية</th><th>النهاية</th><th>حالة القرار</th><th>الصرف</th></tr></thead>
