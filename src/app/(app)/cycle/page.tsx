@@ -41,7 +41,7 @@ export default async function CyclePage({ searchParams }: { searchParams: SP }) 
   const svcName = services.find((s) => s.id === svc)?.name;
   return (
     <>
-      <PageHead title="دورة الصرف" sub="اختار النوع والخدمة ← توليد الاستحقاقات ← تأكيد بيانات الاستلام ← الإرسال في دفعة ← التحويل ← المتابعة">
+      <PageHead title="دورة الصرف" sub="اختار النوع والخدمة ← توليد الاستحقاقات ← الكامل بياناته يتبعت في دفعة ← ينزل المتابعة. الناقص بياناته بيكمل الأول في «استكمال البيانات».">
         <MonthSelect value={m} options={monthOpts(m)} />
         {can(u.role, "generate") && (
           <ActionForm action={generateMonth} className="inline"><input type="hidden" name="m" value={m} /><Submit className="btn secondary">توليد استحقاقات {fmtMonth(m)}</Submit></ActionForm>

@@ -37,7 +37,6 @@ export default async function CasesPage({ searchParams }: { searchParams: SP }) 
   return (
     <>
       <PageHead title="الحالات والقرارات" sub="البيانات الأساسية وبيانات الاستلام وكل قرار بخدمته ونصه وبدايته ونهايته وملخص الصرف">
-        {can(u.role, "decision") && <Link className="btn primary" href="/decisions/new"><Icon.plus /> تسجيل كود وقرار</Link>}
       </PageHead>
       <CasesTabs current="cases" />
       <form className="toolbar filters">

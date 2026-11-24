@@ -12,6 +12,7 @@ export const Icon = {
   menu: (p: P) => <svg {...base(p)}><path d="M3 6h18M3 12h18M3 18h18"/></svg>,
   back: (p: P) => <svg {...base(p)}><path d="M5 12h14M12 5l7 7-7 7"/></svg>,
   open: (p: P) => <svg {...base(p)}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></svg>,
+  x: (p: P) => <svg {...base(p)}><path d="M18 6 6 18M6 6l12 12"/></svg>,
   search: (p: P) => <svg {...base(p)}><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>,
   shield: (p: P) => <svg {...base(p)}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
   key: (p: P) => <svg {...base(p)}><circle cx="7.5" cy="15.5" r="4.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg>,

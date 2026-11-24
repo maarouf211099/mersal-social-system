@@ -33,19 +33,39 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const alerts: [string, string, string][] = [];
   if (M.stages.missing) alerts.push(["bad", `${M.stages.missing} استحقاق بيانات الاستلام بتاعه ناقصة — مش هيتبعت لحد ما يكمل`, `/data?m=${m}`]);
   if (M.stages.needconf) alerts.push(["warn", `${M.stages.needconf} حالة جديدة تحتاج مكالمة تأكيد بيانات قبل الإرسال`, `/data?m=${m}&view=needconf`]);
-  if (M.stages.hold) alerts.push(["warn", `${M.stages.hold} استحقاق معلّق لأن الشهر السابق لم يُستلم — يحتاج اعتماد المشرف`, `/cycle?m=${m}&stage=hold`]);
   if (M.lateNow) alerts.push(["bad", `${M.lateNow} مهمة متأخرة عن موعدها`, "/tasks?view=late"]);
   if (soon) alerts.push(["warn", `${soon} قرار ينتهي خلال ${st.renewLead} شهر ولم يُرسل للتجديد`, "/renewal"]);
   if (ended) alerts.push(["bad", `${ended} قرار انتهت مدته وينتظر الإغلاق`, "/renewal?view=ended"]);
   const noReply = (await noReplyDecisionIds()).size;
   if (noReply) alerts.push(["bad", `${noReply} قرار عليه عدم رد لشهرين متتاليين`, "/renewal?view=noreply"]);
   if (pendingRef) alerts.push(["warn", `${pendingRef} استرداد لم تتم تسويته`, "/refunds?all=1&settle=pending"]);
+  const sc = (...ks: Stage[]) => ks.reduce((a, k) => a + (M.stages[k] ?? 0), 0);
+  const flow = [
+    { l: "استكمال البيانات", v: sc("missing", "needconf"), s: "بيانات استلام ناقصة أو محتاجة تأكيد", href: `/data?m=${m}`, tone: sc("missing", "needconf") ? "bad" : "" },
+    { l: "جاهز للإرسال", v: sc("due", "conf"), s: "بياناته كاملة ومستني الدفعة", href: `/cycle?m=${m}`, tone: "warn" },
+    { l: "في المتابعة", v: sc("sent", "trans", "wait", "noans"), s: "اتبعت ومستني تأكيد الاستلام", href: `/follow?m=${m}`, tone: "info" },
+    { l: "استلم واكتمل", v: sc("recv", "deliv"), s: "الشهر اتقفل للحالة", href: `/follow?m=${m}&view=done`, tone: "ok" },
+    { l: "لم يُصرف / متعثر", v: sc("notpaid", "stuck", "refund"), s: "محتاج معالجة أو غلق", href: "/closing", tone: sc("notpaid", "stuck", "refund") ? "bad" : "" },
+  ];
+  const flowTotal = flow.reduce((a, f) => a + f.v, 0);
   const tm = trendM.map((x) => ({ m: x.m, label: MONTH_NAMES[Number(x.m.slice(5)) - 1] }));
   return (
     <>
       <PageHead title="لوحة المتابعة" sub={`أهلاً ${u.name} · ${fmtMonth(m)}`}><MonthSelect value={m} options={monthOpts(m)} /></PageHead>
       {sp && one(sp.denied) && <div className="alert bad"><Icon.alert />الصفحة المطلوبة غير متاحة لدورك.</div>}
       {alerts.length > 0 && <div className="alerts">{alerts.map(([t, msg, href]) => <div key={msg} className={`alert ${t}`}><span>{msg}</span><Link href={href}>فتح</Link></div>)}</div>}
+
+      <div className="section-title"><h2>دورة {fmtMonth(m)}</h2><span className="muted">كل مرحلة بتسلّم للي بعدها — اضغط على أي مرحلة لفتحها</span></div>
+      <div className="flow">
+        {flow.map((f, i) => (
+          <Link key={f.l} href={f.href} className={f.tone}>
+            <span className="step"><i>{i + 1}</i>{f.l}</span>
+            <span className="v">{f.v.toLocaleString("en-US")}</span>
+            <span className="l">{f.s}</span>
+            <span className="bar"><b style={{ width: `${flowTotal ? Math.round((f.v / flowTotal) * 100) : 0}%` }} /></span>
+          </Link>
+        ))}
+      </div>
 
       <div className="section-title"><h2>مؤشرات التشغيل</h2><span className="muted">من سجل العمليات الفعلي</span></div>
       <div className="kpis">
