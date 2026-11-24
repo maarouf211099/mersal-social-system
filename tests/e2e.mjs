@@ -262,6 +262,12 @@ await p.locator('input[name="code"]').fill("5001");
 await p.waitForSelector(".case-info .kv", { timeout: 10000 }).catch(() => {});
 ok(await p.locator(".case-info", { hasText: "بيانات الحالة من السيستم" }).count() === 1, "فورم القرار يجيب بيانات الحالة من السيستم");
 
+// ── دليل العمل: نافذة منبثقة فيها دورة الحالة
+await go("/");
+await p.locator(".side nav a", { hasText: "دليل العمل" }).click();
+ok(await p.locator("dialog.guide-modal[open] .gm-flow li").count() === 6, "دليل العمل بيفتح نافذة فيها دورة الحالة (6 مراحل)");
+await p.keyboard.press("Escape");
+
 // ── إضافة مهمة من الأنواع وإسنادها لأكتر من موظف بمدة
 await go("/tasks");
 const nOps = await p.locator('details.new-task select[name="opType"] option:not([disabled])').count();

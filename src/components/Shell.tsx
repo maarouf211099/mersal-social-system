@@ -8,6 +8,7 @@ import { Toaster } from "./forms";
 import { Suspense } from "react";
 import { NavProgress } from "./NavProgress";
 import { SearchKey } from "./SearchKey";
+import { GuideModal } from "./GuideModal";
 
 type NavItem = { href: string; label: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.JSX.Element; count?: number };
 
@@ -17,7 +18,6 @@ export function Shell({ user, current, counts, children }: { user: AppUser; curr
     { items: [
       { href: "/", label: "لوحة المتابعة", icon: Icon.home },
       { href: "/my", label: "مهامي", icon: Icon.inbox, count: counts.my },
-      { href: "/guide", label: "دليل العمل", icon: Icon.compass },
     ] },
     { label: "الحالات والصرف", items: [
       { href: "/cases", label: "الحالات والقرارات", icon: Icon.folder },
@@ -58,7 +58,7 @@ export function Shell({ user, current, counts, children }: { user: AppUser; curr
         <Link href="/" className="logo" aria-label="الإدارة الاجتماعية"><Logo height={42} /></Link>
         <div className="sys-title">نظام الإدارة الاجتماعية</div>
         <nav aria-label="القائمة">
-          {groups.map((g, i) => <div key={i} style={{ display: "contents" }}>{g.label && <div className="nav-label">{g.label}</div>}{g.items.map(link)}</div>)}
+          {groups.map((g, i) => <div key={i} style={{ display: "contents" }}>{g.label && <div className="nav-label">{g.label}</div>}{g.items.map(link)}{i === 0 && <GuideModal />}</div>)}
         </nav>
         <div className="side-foot">
           <div className="me">
