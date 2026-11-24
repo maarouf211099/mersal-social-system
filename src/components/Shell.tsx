@@ -7,6 +7,7 @@ import { Icon, Logo } from "./icons";
 import { Toaster } from "./forms";
 import { Suspense } from "react";
 import { NavProgress } from "./NavProgress";
+import { SearchKey } from "./SearchKey";
 
 type NavItem = { href: string; label: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.JSX.Element; count?: number };
 
@@ -78,9 +79,12 @@ export function Shell({ user, current, counts, children }: { user: AppUser; curr
           <form action="/cases" className="qsearch" role="search">
             <Icon.search />
             <input type="search" name="q" placeholder="ابحث بالكود أو الاسم أو الهاتف أو رقم القرار…" aria-label="بحث سريع" />
+            <kbd>/</kbd>
           </form>
+          <SearchKey />
           <span className="spacer" />
-          <span className="today">{today}</span>
+          <span className="today"><Icon.calendar />{today}</span>
+          <Link href="/my" className="icon-btn bell" title={`مهامي المفتوحة: ${counts.my}`} aria-label={`مهامي المفتوحة: ${counts.my}`}><Icon.bell />{counts.my > 0 && <span className="dot">{counts.my > 99 ? "99+" : counts.my}</span>}</Link>
           {can(user.role, "decision") && <Link className="btn primary small" href="/decisions/new" title="تسجيل كود وقرار" aria-label="تسجيل كود وقرار"><Icon.plus /> <span className="lbl">تسجيل كود وقرار</span></Link>}
         </header>
         <main className="content">{children}</main>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requirePageUser } from "@/lib/auth";
+import { can } from "@/lib/perms";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { userNames } from "@/lib/users";
@@ -48,10 +49,28 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
     { l: "لم يُصرف / متعثر", v: sc("notpaid", "stuck", "refund"), s: "محتاج معالجة أو غلق", href: "/closing", tone: sc("notpaid", "stuck", "refund") ? "bad" : "" },
   ];
   const flowTotal = flow.reduce((a, f) => a + f.v, 0);
+  const todo = sc("missing", "needconf", "due", "conf", "sent", "trans", "wait", "noans");
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Cairo", hour: "numeric", hour12: false }).format(new Date()));
+  const greet = hour < 12 ? "صباح الخير" : "مساء الخير";
+  const myOpen = await prisma.task.count({ where: { assigneeId: u.id, status: { in: ["new", "in_progress"] } } });
   const tm = trendM.map((x) => ({ m: x.m, label: MONTH_NAMES[Number(x.m.slice(5)) - 1] }));
   return (
     <>
-      <PageHead title="لوحة المتابعة" sub={`أهلاً ${u.name} · ${fmtMonth(m)}`}><MonthSelect value={m} options={monthOpts(m)} /></PageHead>
+      <section className="hero-card">
+        <div className="hc-main">
+          <span className="hc-kicker">{greet} · {fmtMonth(m)}</span>
+          <h1>أهلاً {u.name.split(" ")[0]}</h1>
+          <p>{todo ? `عندك ${todo.toLocaleString("en-US")} حاجة مستنية شغل في دورة ${fmtMonth(m)}.` : `دورة ${fmtMonth(m)} ماشية — مفيش حاجة متأخرة.`}</p>
+          <div className="hc-month"><MonthSelect value={m} options={monthOpts(m)} /></div>
+        </div>
+        <nav className="hc-actions" aria-label="اختصارات">
+          {can(u.role, "decision") && <Link href="/decisions/new"><Icon.plus /><b>تسجيل كود وقرار</b><small>كود جديد أو قرار لحالة مسجلة</small></Link>}
+          <Link href={`/data?m=${m}`}><Icon.user /><b>استكمال البيانات</b><small>{sc("missing", "needconf")} حالة ناقصة</small></Link>
+          <Link href={`/cycle?m=${m}`}><Icon.wallet /><b>دورة الصرف</b><small>{sc("due", "conf")} جاهز للإرسال</small></Link>
+          <Link href={`/follow?m=${m}`}><Icon.phone /><b>المتابعة</b><small>{sc("sent", "trans", "wait", "noans")} مستني تأكيد</small></Link>
+          <Link href="/my"><Icon.inbox /><b>مهامي</b><small>{myOpen} مهمة مفتوحة</small></Link>
+        </nav>
+      </section>
       {sp && one(sp.denied) && <div className="alert bad"><Icon.alert />الصفحة المطلوبة غير متاحة لدورك.</div>}
       {alerts.length > 0 && <div className="alerts">{alerts.map(([t, msg, href]) => <div key={msg} className={`alert ${t}`}><span>{msg}</span><Link href={href}>فتح</Link></div>)}</div>}
 
