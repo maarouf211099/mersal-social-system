@@ -44,7 +44,7 @@ export function DecisionForm({ services, cases, init, canOverride }: {
       <input type="hidden" name="renewOf" value={init.renewOf ?? ""} />
       <div className="fgrid">
         <label className="field"><span>كود الحالة *</span><input name="code" list="caseCodes" value={code} onChange={(e) => setCode(e.target.value)} required dir="ltr" inputMode="numeric" /></label>
-        <label className="field"><span>اسم الحالة {found ? "" : "*"}</span>{found ? <input value={found.name} disabled /> : <input name="name" placeholder="كود جديد: اكتب الاسم لتسجيل الحالة" />}</label>
+        <label className="field"><span>اسم الحالة {found ? "" : "*"}</span>{found ? <input key="found" value={found.name} disabled readOnly /> : <input key="new" name="name" placeholder="كود جديد: اكتب الاسم لتسجيل الحالة" />}</label>
         <label className="field"><span>تاريخ القرار</span><input type="date" name="issueDate" value={issue} onChange={(e) => {
           setIssue(e.target.value); const s = suggest(e.target.value);
           if (s && !init.startAfter) setLines((ls) => ls.map((l) => ({ ...l, start: s, end: l.touchedEnd ? l.end : add(s, l.months - 1) })));
