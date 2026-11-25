@@ -253,7 +253,8 @@ export async function followCall(_p: State, f: FormData): Promise<State> {
     const e = await loadEnt(id, st.followDays);
     if (!e) fail("الاستحقاق غير موجود.");
     if (e!.missing.length && !e!.legacySent) fail(`مينفعش تسجيل متابعة أو استلام وبيانات الاستلام ناقصة: ${e!.missing.join("، ")}. كمّلها الأول من «استكمال البيانات».`);
-    const late = e!.stage === "noans" && e!.followResult === "no_answer";
+    // رد متأخر بعد 3 محاولات، أو اتصرف بعد ما كان «تم الرد ولم يتم الصرف» (معاودة الاتصال)
+    const late = (e!.stage === "noans" && e!.followResult === "no_answer") || e!.stage === "notpaid";
     if (!(canFollow(e!.stage) && !e!.followDone) && !(late && a === "paid")) fail("لا يمكن تسجيل متابعة على هذا الاستحقاق في مرحلته الحالية.");
     if (a === "no_answer" && e!.unanswered >= 3) fail("اكتملت 3 محاولات بالفعل. يمكن فقط تسجيل رد متأخر.");
     let msg = "";
@@ -262,6 +263,7 @@ export async function followCall(_p: State, f: FormData): Promise<State> {
       if (a === "paid") {
         await tx.entitlement.update({ where: { id }, data: { followResult: "received", followAt: new Date(), followById: u.id } });
         await tx.task.updateMany({ where: { kind: "follow", entitlementId: id }, data: { status: "done", completedAt: new Date(), completedById: u.id, result: late ? "رد متأخر · تم الصرف" : "تم الرد وتم الصرف" } });
+        if (e!.stage === "notpaid") await tx.task.updateMany({ where: { kind: "action", entitlementId: id, status: { in: ["new", "in_progress", "stuck"] } }, data: { status: "done", completedAt: new Date(), completedById: u.id, result: "معاودة الاتصال: تم الصرف" } });
         msg = "سُجل: رد وتم الصرف. اكتملت دورة الشهر لهذه الحالة.";
       } else {
         const n = e!.unanswered + 1;

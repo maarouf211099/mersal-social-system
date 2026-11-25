@@ -263,6 +263,10 @@ await p.locator('input[name="code"]').fill("5001");
 await p.waitForSelector(".case-info .kv", { timeout: 10000 }).catch(() => {});
 ok(await p.locator(".case-info", { hasText: "بيانات الحالة من السيستم" }).count() === 1, "فورم القرار يجيب بيانات الحالة من السيستم");
 
+// ── المتابعة: طريقة الصرف + فلتر الموقف
+await go(`/follow?m=${month}&view=all`);
+ok(await p.locator("th", { hasText: "طريقة الصرف" }).count() === 1 && await p.locator('form.filters select[name="stage"] option[value="notpaid"]').count() === 1, "المتابعة: عمود طريقة الصرف وفلتر الموقف");
+
 // ── دليل العمل: نافذة منبثقة فيها دورة الحالة
 await go("/");
 await p.locator(".side nav a", { hasText: "دليل العمل" }).click();
