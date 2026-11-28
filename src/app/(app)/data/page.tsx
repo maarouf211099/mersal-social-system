@@ -5,11 +5,11 @@ import { dataList } from "@/lib/data-list";
 import { fmtMonth } from "@/lib/months";
 import { fmtTs } from "@/lib/format";
 import { monthOf, monthOpts, one, qs, type SP } from "@/lib/page";
-import { Badge, CaseLink, PageHead, Table } from "@/components/ui";
+import { CaseLink, PageHead, Table } from "@/components/ui";
 import { MonthSelect } from "@/components/client";
 import { Icon } from "@/components/icons";
 
-const VIEWS = [{ key: "missing", label: "بيانات ناقصة" }, { key: "needconf", label: "محتاجة تأكيد" }, { key: "noans", label: "3 محاولات بدون رد" }, { key: "all", label: "الكل" }];
+const VIEWS = [{ key: "missing", label: "محتاجة استكمال" }, { key: "noans", label: "3 محاولات بدون رد" }, { key: "all", label: "الكل" }];
 
 /** فريق البيانات: يكلّم الحالات ويكمّل بيانات الاستلام كل شهر — لحد ما تكمل مش بتتبعت ولا بتنزل المتابعة */
 export default async function DataPage({ searchParams }: { searchParams: SP }) {
@@ -40,7 +40,7 @@ export default async function DataPage({ searchParams }: { searchParams: SP }) {
             <tr key={r.code}>
               <td className="nowrap"><CaseLink code={r.code} name={r.name} /></td>
               <td>{r.phone ? <span className="num">{r.phone}</span> : <span className="miss">ناقص</span>}</td>
-              <td>{r.missing.length ? r.missing.map((x) => <span key={x} className="miss" style={{ margin: "0 0 3px 4px" }}>{x}</span>) : <Badge tone="info">مكتملة · محتاجة مكالمة تأكيد</Badge>}</td>
+              <td>{r.missing.map((x) => <span key={x} className="miss" style={{ margin: "0 0 3px 4px" }}>{x}</span>)}</td>
               <td>{r.ents.map((e) => <span key={e.id} className="line-item">{e.serviceName}{e.month !== m && <small> · مؤجل من {fmtMonth(e.month)}</small>}</span>)}</td>
               <td className="nowrap"><b style={{ color: r.tries >= 3 ? "var(--bad)" : undefined }}>{r.tries}/3</b> بدون رد{r.lastTry && <span className="cell-sub">آخر محاولة {fmtTs(r.lastTry)}</span>}</td>
               <td>{r.assignee ? names.name(r.assignee) : <span className="muted">غير مسندة</span>}</td>

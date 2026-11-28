@@ -35,7 +35,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
         {t.returnNote && <div className="alert warn" style={{ marginTop: 10 }}>أُرجعت للتصحيح ({t.returnedCount}): {t.returnNote}</div>}
       </div>
       {t.entitlementId && t.kind !== "action" && open && <div className="alert">هذه المهمة تُنفذ من صفحة الاستحقاق: <Link className="strong" href={`/cycle/${t.entitlementId}`}>فتح الاستحقاق وتنفيذ المطلوب</Link></div>}
-      {t.kind === "action" && open && can(u.role, "task") && (
+      {t.kind === "action" && open && can(u, "task") && (
         <div className="card"><div className="card-title"><h2>إغلاق مهمة المعالجة</h2></div>
           <ActionForm action={completeAction}><input type="hidden" name="taskId" value={t.id} />
             <label className="field"><span>ما تم تنفيذه *</span><textarea name="result" required /></label>
@@ -43,7 +43,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           </ActionForm>
         </div>
       )}
-      {t.kind === "manual" && open && can(u.role, "task") && (
+      {t.kind === "manual" && open && can(u, "task") && (
         <div className="card"><div className="card-title"><h2>تحديث المهمة</h2></div>
           <ActionForm action={updateTaskStatus}><input type="hidden" name="id" value={t.id} />
             <label className="field"><span>نتيجة التنفيذ (إلزامية للإغلاق)</span><textarea name="result" defaultValue={t.result} /></label>
@@ -55,7 +55,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           </ActionForm>
         </div>
       )}
-      {t.status === "done" && can(u.role, "return") && (
+      {t.status === "done" && can(u, "return") && (
         <div className="card"><div className="card-title"><h2>إرجاع للتصحيح</h2><Badge tone="warn">تُحسب على من نفّذها</Badge></div>
           <ActionForm action={returnTask}><input type="hidden" name="id" value={t.id} />
             <label className="field"><span>ما الذي يحتاج تصحيحاً؟ *</span><input name="note" required /></label>

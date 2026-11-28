@@ -42,9 +42,9 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
   return (
     <>
       <PageHead title={c.name} sub={<><span className="num">{c.code}</span> · {c.dataConfirmed ? <Badge tone="ok">بيانات مؤكدة</Badge> : <Badge tone="warn">بيانات غير مؤكدة</Badge>} · {miss.length ? <Badge tone="warn">بيانات استلام ناقصة</Badge> : <Badge tone="ok">بيانات الاستلام مكتملة</Badge>}</>}>
-        {can(u.role, "case") && <Link className="btn secondary" href={`/cases/${encodeURIComponent(code)}/edit`}>تعديل البيانات</Link>}
-        {can(u.role, "op") && <Link className="btn secondary" href={`/ops?code=${encodeURIComponent(code)}#new`}><Icon.plus /> عملية</Link>}
-        {can(u.role, "decision") && <Link className="btn primary" href={`/decisions/new?code=${encodeURIComponent(code)}`}><Icon.plus /> قرار</Link>}
+        {can(u, "case") && <Link className="btn secondary" href={`/cases/${encodeURIComponent(code)}/edit`}>تعديل البيانات</Link>}
+        {can(u, "op") && <Link className="btn secondary" href={`/ops?code=${encodeURIComponent(code)}#new`}><Icon.plus /> عملية</Link>}
+        {can(u, "decision") && <Link className="btn primary" href={`/decisions/new?code=${encodeURIComponent(code)}`}><Icon.plus /> قرار</Link>}
       </PageHead>
       {saved && <div className="alert ok"><Icon.check />تم الحفظ.</div>}
       {dups.length > 0 && <div className="alert warn"><Icon.alert /><span>بيانات مشتركة مع حالات أخرى (راجع احتمال التكرار): {dups.map((d, i) => <span key={i}>{i ? " · " : ""}{d.field}: {d.codes.map((x, j) => <span key={x}>{j ? "، " : ""}<a className="strong" href={`/cases/${encodeURIComponent(x)}`}>{x}</a></span>)}</span>)}</span></div>}
@@ -94,7 +94,7 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
                 <td className="nowrap">{l.months} شهر{l.stoppedAt && <span className="cell-sub"><Badge tone="bad">الخدمة اتقفلت</Badge> {l.stopReason}</span>}</td>
                 <td className="nowrap">{first && <><Badge tone={stt === "active" ? "ok" : stt === "ended" ? "" : "bad"}>{DEC_STATUS_LABELS[stt]}</Badge>{d.stopReason && <span className="cell-sub">{d.stopReason}</span>}{d.needsDonation && <span className="cell-sub"><Badge tone="warn">تحتاج لتبرع</Badge></span>}</>}</td>
                 <td>{first && (d.renewalStatus !== "none" ? <Badge tone="info">{RENEWAL_LABELS[d.renewalStatus]}</Badge> : "—")}</td>
-                <td>{first && can(u.role, "decision") && <Link className="btn secondary small" href={`/decisions/new?renew=${d.id}`}>تجديد</Link>}</td>
+                <td>{first && can(u, "decision") && <Link className="btn secondary small" href={`/decisions/new?renew=${d.id}`}>تجديد</Link>}</td>
               </tr>
             );
           })}
@@ -136,7 +136,7 @@ export default async function CaseFilePage({ params, searchParams }: { params: P
           ) : <p className="muted">لم تُعدّل البيانات منذ التسجيل.</p>}
         </div>
       </div>
-      <Attachments items={files} names={names} caseCode={code} canAdd={can(u.role, "case")} />
+      <Attachments items={files} names={names} caseCode={code} canAdd={can(u, "case")} />
       </Tabs>
     </>
   );

@@ -71,8 +71,8 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
       </div>
 
       {/* ── الإجراء المطلوب حسب المرحلة ── */}
-      {(e.stage === "needconf" || e.stage === "missing") && can(u.role, "confirm") && (
-        <div className="card"><div className="card-title"><h2>{e.stage === "missing" ? "مكالمة استكمال بيانات الاستلام" : "مكالمة تأكيد البيانات"}</h2></div>
+      {e.stage === "missing" && can(u, "confirm") && (
+        <div className="card"><div className="card-title"><h2>مكالمة استكمال بيانات الاستلام</h2></div>
           {e.missing.length > 0 && <div className="alert warn">ناقص: <b>{e.missing.join("، ")}</b>. الحالة مش هتتبعت ولا هتنزل المتابعة لحد ما تكمل.</div>}
           <ActionForm action={confirmData}>
             <input type="hidden" name="entId" value={e.id} />
@@ -84,7 +84,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
           </ActionForm>
         </div>
       )}
-      {e.stage === "hold" && can(u.role, "approve") && (
+      {e.stage === "hold" && can(u, "approve") && (
         <div className="card"><div className="card-title"><h2>اعتماد إدراج استحقاق معلّق</h2></div>
           {prev && <div className="alert warn">الشهر السابق ({fmtMonth(prev.month)}) لم يُستلم بعد. <Link href={`/cycle/${prev.id}`}>فتح الشهر السابق</Link></div>}
           <ActionForm action={approveHold}>
@@ -97,7 +97,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
           </ActionForm>
         </div>
       )}
-      {e.kind === "financial" && e.sentAt && !e.transfer && !e.stoppedAt && can(u.role, "transfer") && (
+      {e.kind === "financial" && e.sentAt && !e.transfer && !e.stoppedAt && can(u, "transfer") && (
         <div className="card"><div className="card-title"><h2>تسجيل التحويل</h2></div>
           <ActionForm action={recordTransfer}>
             <input type="hidden" name="ids" value={e.id} /><input type="hidden" name="bulk" value="0" />
@@ -112,7 +112,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
           </ActionForm>
         </div>
       )}
-      {(followOpen || late) && can(u.role, "follow") && (
+      {(followOpen || late) && can(u, "follow") && (
         <div className="grid2">
           <div className="card"><div className="card-title"><h2>تسجيل نتيجة المتابعة</h2><span className="muted">المحاولات بدون رد: {e.unanswered}/3</span></div>
             <ActionForm action={followCall}>
@@ -138,7 +138,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
           )}
         </div>
       )}
-      {e.transferred > e.refundTotal && !e.stoppedAt && can(u.role, "refund") && (
+      {e.transferred > e.refundTotal && !e.stoppedAt && can(u, "refund") && (
         <details className="box" style={{ marginTop: 14 }}><summary>تسجيل استرداد (المتبقي القابل للاسترداد {money(e.transferred - e.refundTotal)} ج)</summary>
           <ActionForm action={recordRefund} className="stack" >
             <input type="hidden" name="entId" value={e.id} />
@@ -155,7 +155,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
           </ActionForm>
         </details>
       )}
-      {e.kind === "card" && e.sentAt && !["recv", "stop"].includes(e.stage) && can(u.role, "send") && (
+      {e.kind === "card" && e.sentAt && !["recv", "stop"].includes(e.stage) && can(u, "send") && (
         <details className="box" style={{ marginTop: 14 }}><summary>إعادة إرسال الكارت{e.resendCount ? ` (أُعيد ${e.resendCount} مرة)` : ""}</summary>
           <ActionForm action={resendCard} className="row">
             <input type="hidden" name="entId" value={e.id} />
@@ -164,7 +164,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
           </ActionForm>
         </details>
       )}
-      {e.transfer && can(u.role, "approve") && (
+      {e.transfer && can(u, "approve") && (
         <details className="box" style={{ marginTop: 14 }}><summary>تصحيح بيانات التحويل (مشرف) — القيمة القديمة تُحفظ في سجل التدقيق</summary>
           <ActionForm action={correctTransfer}>
             <input type="hidden" name="entId" value={e.id} />
@@ -179,7 +179,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
           </ActionForm>
         </details>
       )}
-      {!["recv", "deliv", "stop"].includes(e.stage) && can(u.role, "follow") && (
+      {!["recv", "deliv", "stop"].includes(e.stage) && can(u, "follow") && (
         <details className="box" style={{ marginTop: 14 }}><summary>{e.stuckReason ? "إلغاء التعثر" : "تسجيل تعثر"}</summary>
           <ActionForm action={setStuck}>
             <input type="hidden" name="entId" value={e.id} />
@@ -201,7 +201,7 @@ export default async function EntitlementPage({ params }: { params: Promise<{ id
             <ul className="timeline">{tasks.map((t) => <li key={t.id}><Link href={`/tasks/${t.id}`}>{t.title}</Link> · {names.name(t.assigneeId)} · {t.status === "done" ? `نفّذها ${names.name(t.completedById)}` : TASK_STATUS_LABELS[t.status]}</li>)}</ul></>}
         </div>
       </div>
-    <div style={{ marginTop: 14 }}><Attachments items={files} names={names} caseCode={e.caseCode} entitlementId={e.id} canAdd={can(u.role, "case")} /></div>
+    <div style={{ marginTop: 14 }}><Attachments items={files} names={names} caseCode={e.caseCode} entitlementId={e.id} canAdd={can(u, "case")} /></div>
     </>
   );
 }

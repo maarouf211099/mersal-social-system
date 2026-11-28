@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
+import { canSee } from "@/lib/perms";
 import { audit } from "@/lib/audit";
 import { exportRows, toCSV } from "@/lib/reports";
 import { toXlsx } from "@/lib/xlsx";
@@ -12,6 +13,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ kind
   const u = await auth();
   if (!u || u.mustChangePassword) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { kind } = await params;
+  const page = ({ cycle: "cycle", cases: "cases", data: "data", closing: "closing", renewal: "renewal", month: "reports", staff: "reports", ops: "reports", compare: "reports" } as Record<string, string>)[kind];
+  if (page && !canSee(u, page)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const p = req.nextUrl.searchParams;
   const m = isMonth(p.get("m")) ? p.get("m")! : currentMonth();
   const f = { staff: p.get("staff") || undefined, svc: p.get("svc") || undefined, dec: p.get("dec") || undefined, gov: p.get("gov") || undefined, nat: p.get("nat") || undefined };

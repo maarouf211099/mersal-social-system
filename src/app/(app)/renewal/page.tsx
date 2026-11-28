@@ -72,9 +72,9 @@ export default async function RenewalPage({ searchParams }: { searchParams: SP }
             <div className="toolbar">
               <label className="field grow"><span>ملاحظة / سبب (مطلوب للإيقاف)</span><input name="reason" placeholder="مثال: أُرسلت لإدارة البحث · أو سبب الإيقاف" /></label>
               <div className="auto inline">
-                {can(u.role, "renewal") && <Submit className="btn primary" name="op" value="renew">إرسال المحدد للتجديد</Submit>}
-                {can(u.role, "close") && <Submit className="btn secondary" name="op" value="close">إغلاق المحدد كمنتهي</Submit>}
-                {can(u.role, "decision.stop") && <Submit className="btn danger" name="op" value="stop">إيقاف المحدد</Submit>}
+                {can(u, "renewal") && <Submit className="btn primary" name="op" value="renew">إرسال المحدد للتجديد</Submit>}
+                {can(u, "close") && <Submit className="btn secondary" name="op" value="close">إغلاق المحدد كمنتهي</Submit>}
+                {can(u, "decision.stop") && <Submit className="btn danger" name="op" value="stop">إيقاف المحدد</Submit>}
               </div>
             </div>
           )}
@@ -82,14 +82,14 @@ export default async function RenewalPage({ searchParams }: { searchParams: SP }
             <div className="toolbar">
               {view === "noreply" ? (
                 <><input type="hidden" name="status" value="stopped" /><input type="hidden" name="reason" value="عدم الرد لشهرين متتاليين" />
-                  {can(u.role, "decision.stop") && <Submit className="btn danger">إيقاف المحدد (عدم الرد لشهرين)</Submit>}
-                  {can(u.role, "renewal") && <span className="muted">أو أرسلها للتجديد / إعادة البحث من قائمة «تنتهي خلال».</span>}</>
+                  {can(u, "decision.stop") && <Submit className="btn danger">إيقاف المحدد (عدم الرد لشهرين)</Submit>}
+                  {can(u, "renewal") && <span className="muted">أو أرسلها للتجديد / إعادة البحث من قائمة «تنتهي خلال».</span>}</>
               ) : view === "ended" ? (
                 <><input type="hidden" name="status" value="ended" /><input type="hidden" name="reason" value="انتهاء المدة" />
-                  {can(u.role, "close") && <Submit className="btn primary">إغلاق المحدد كمنتهي</Submit>}</>
+                  {can(u, "close") && <Submit className="btn primary">إغلاق المحدد كمنتهي</Submit>}</>
               ) : (
                 <><label className="field grow"><span>ملاحظة الإرسال (مثال: أُرسلت لإدارة البحث)</span><input name="note" /></label>
-                  {can(u.role, "renewal") && <div className="auto"><Submit className="btn primary">إرسال المحدد للتجديد</Submit></div>}</>
+                  {can(u, "renewal") && <div className="auto"><Submit className="btn primary">إرسال المحدد للتجديد</Submit></div>}</>
               )}
             </div>
           )}
@@ -105,14 +105,14 @@ export default async function RenewalPage({ searchParams }: { searchParams: SP }
                   <td>{d.lines.map((l) => <span key={l.id} className="line-item">{l.service.name}{l.beneficiary ? ` (${l.beneficiary})` : ""} · {money(l.amount)} ج <small>· {fmtMonth(l.startMonth)} ← {fmtMonth(l.endMonth)}</small></span>)}{d.text && <span className="cell-sub clamp" title={d.text}>{d.text}</span>}</td>
                   <td className="nowrap">{fmtMonth(d.end)}{view !== "ended" && view !== "noreply" && <span className="cell-sub"><Badge tone={left <= 1 ? "bad" : "warn"}>متبقي {left} شهر</Badge></span>}</td>
                   <td>{d.renewalStatus !== "none" ? <><Badge tone="info">{RENEWAL_LABELS[d.renewalStatus]}</Badge><span className="cell-sub">{fmtTs(d.renewalAt)} · {names.name(d.renewalById)}</span></> : <span className="muted">لم يُرسل</span>}</td>
-                  <td className="nowrap">{view !== "ended" && can(u.role, "decision") && <Link className="btn secondary small" href={`/decisions/new?renew=${d.id}`}>تسجيل قرار التجديد</Link>}</td>
+                  <td className="nowrap">{view !== "ended" && can(u, "decision") && <Link className="btn secondary small" href={`/decisions/new?renew=${d.id}`}>تسجيل قرار التجديد</Link>}</td>
                 </tr>
               );
             })}
           </Table>
         </div>
       </ActionForm>
-      {view === "sent" && can(u.role, "renewal") && list.length > 0 && (
+      {view === "sent" && can(u, "renewal") && list.length > 0 && (
         <details className="box" style={{ marginTop: 14 }}><summary>تسجيل «لم يُجدد» لقرار</summary>
           <ActionForm action={markNotRenewed} className="inline">
             <select name="id" style={{ width: 280 }}>{list.map((d) => <option key={d.id} value={d.id}>{d.no} · {d.caseCode} · {d.case.name}</option>)}</select>

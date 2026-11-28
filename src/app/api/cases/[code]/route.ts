@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
+import { can, canSee } from "@/lib/perms";
 import { prisma } from "@/lib/prisma";
 import { recvMissing } from "@/lib/recv";
 
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const u = await auth();
   if (!u || u.mustChangePassword) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!can(u, "decision") && !canSee(u, "cases")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const code = decodeURIComponent((await params).code).trim();
   const c = await prisma.case.findUnique({ where: { code } });
   if (!c) return NextResponse.json({ found: false });

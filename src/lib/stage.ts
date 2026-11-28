@@ -78,7 +78,7 @@ export function stageOf(e: StageInput): Stage {
     return "wait";
   }
   // الشهر اللي ما اتبعتش بيتأجل للدفعة اللي بعدها ويتشغّل عليه هو والشهر الجديد عادي (مفيش تعليق)
-  if (e.needsConfirm) return e.confirmedAt ? "conf" : "needconf";
+  // التأكيد واستكمال البيانات حاجة واحدة: لو بيانات الاستلام كاملة الحالة جاهزة للصرف
   return "due";
 }
 

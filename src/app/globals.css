@@ -439,6 +439,11 @@ select option { color: var(--text); font-weight: 400; }
 /* كروت الأنظمة (لو استُخدمت) */
 .ov, .sys { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-card); }
 
+.perm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.perm-list .check { padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); font-weight: 600; transition: border-color .15s, background .15s; }
+.perm-list .check:has(input:checked) { border-color: var(--brand-200); background: var(--brand-50); color: var(--brand-700); }
+.card-title .check { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+
 /* ═════════ دليل العمل (نافذة منبثقة) ═════════ */
 .guide-modal { width: min(680px, 94vw); max-height: 90dvh; padding: 0; border: 0; border-radius: 20px; background: var(--surface); color: var(--text); box-shadow: 0 30px 80px -20px rgba(4, 40, 42, .45); overflow: auto; }
 .guide-modal[open] { animation: pop .3s var(--ease) both; }

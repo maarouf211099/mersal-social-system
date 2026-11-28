@@ -63,7 +63,7 @@ export default async function RefundsPage({ searchParams }: { searchParams: SP }
               <td>
                 <Badge tone={r.settlement === "settled" ? "ok" : "warn"}>{SETTLEMENT_LABELS[r.settlement]}</Badge>
                 {r.how && r.settlement === "settled" && <span className="cell-sub">{POLICY_LABELS[r.how]}</span>}
-                {r.settlement === "pending" && can(u.role, "refund") && (
+                {r.settlement === "pending" && can(u, "refund") && (
                   <ActionForm action={settleRefund} className="inline" feedbackTop={false}>
                     <input type="hidden" name="id" value={r.id} />
                     <select name="how" defaultValue={r.how ?? st.policy} style={{ width: 170 }}>{Object.entries(POLICY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>

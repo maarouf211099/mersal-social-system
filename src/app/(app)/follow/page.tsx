@@ -79,7 +79,7 @@ export default async function FollowPage({ searchParams }: { searchParams: SP })
                 <td className="nowrap"><b style={{ color: e.followDone ? "var(--ok)" : "var(--bad)" }}>{e.attempts.length}/3</b>{last && <span className="cell-sub">{fmtTs(last.createdAt)} · {names.name(last.userId)}</span>}</td>
                 <td><StageBadge stage={e.stage} kind={e.kind} />{e.notPaidReason && <span className="cell-sub">{e.notPaidReason}{e.notPaidAction ? ` · ${e.notPaidAction}` : ""}</span>}</td>
                 <td>
-                  {can(u.role, "follow") && ((canFollow(e.stage) && !e.followDone) || late) && (
+                  {can(u, "follow") && ((canFollow(e.stage) && !e.followDone) || late) && (
                     <ActionForm action={followCall} className="inline">
                       <input type="hidden" name="entId" value={e.id} />
                       {!late && e.unanswered < 3 && <Submit className="btn secondary small" name="a" value="no_answer" pendingText="…">لم يرد</Submit>}

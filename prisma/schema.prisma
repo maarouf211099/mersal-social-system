@@ -29,6 +29,7 @@ model User {
   team               String    @default("")
   isActive           Boolean   @default(true)
   mustChangePassword Boolean   @default(true)
+  perms              Json? // صلاحيات مخصصة { pages: [], actions: [] } — فاضي = صلاحيات الدور
   sessionVersion     Int       @default(1)
   lastLoginAt        DateTime?
   createdAt          DateTime  @default(now())

@@ -33,7 +33,6 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const ended = endedOpen.filter((g) => g._max.endMonth! < cm).length;
   const alerts: [string, string, string][] = [];
   if (M.stages.missing) alerts.push(["bad", `${M.stages.missing} استحقاق بيانات الاستلام بتاعه ناقصة — مش هيتبعت لحد ما يكمل`, `/data?m=${m}`]);
-  if (M.stages.needconf) alerts.push(["warn", `${M.stages.needconf} حالة جديدة تحتاج مكالمة تأكيد بيانات قبل الإرسال`, `/data?m=${m}&view=needconf`]);
   if (M.lateNow) alerts.push(["bad", `${M.lateNow} مهمة متأخرة عن موعدها`, "/tasks?view=late"]);
   if (soon) alerts.push(["warn", `${soon} قرار ينتهي خلال ${st.renewLead} شهر ولم يُرسل للتجديد`, "/renewal"]);
   if (ended) alerts.push(["bad", `${ended} قرار انتهت مدته وينتظر الإغلاق`, "/renewal?view=ended"]);
@@ -42,7 +41,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   if (pendingRef) alerts.push(["warn", `${pendingRef} استرداد لم تتم تسويته`, "/refunds?all=1&settle=pending"]);
   const sc = (...ks: Stage[]) => ks.reduce((a, k) => a + (M.stages[k] ?? 0), 0);
   const flow = [
-    { l: "استكمال البيانات", v: sc("missing", "needconf"), s: "بيانات استلام ناقصة أو محتاجة تأكيد", href: `/data?m=${m}`, tone: sc("missing", "needconf") ? "bad" : "" },
+    { l: "استكمال البيانات", v: sc("missing", "needconf"), s: "بيانات الاستلام ناقصة", href: `/data?m=${m}`, tone: sc("missing", "needconf") ? "bad" : "" },
     { l: "جاهز للإرسال", v: sc("due", "conf"), s: "بياناته كاملة ومستني الدفعة", href: `/cycle?m=${m}`, tone: "warn" },
     { l: "في المتابعة", v: sc("sent", "trans", "wait", "noans"), s: "اتبعت ومستني تأكيد الاستلام", href: `/follow?m=${m}`, tone: "info" },
     { l: "استلم واكتمل", v: sc("recv", "deliv"), s: "الشهر اتقفل للحالة", href: `/follow?m=${m}&view=done`, tone: "ok" },
@@ -64,7 +63,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
           <div className="hc-month"><MonthSelect value={m} options={monthOpts(m)} /></div>
         </div>
         <nav className="hc-actions" aria-label="اختصارات">
-          {can(u.role, "decision") && <Link href="/decisions/new"><Icon.plus /><b>تسجيل كود وقرار</b><small>كود جديد أو قرار لحالة مسجلة</small></Link>}
+          {can(u, "decision") && <Link href="/decisions/new"><Icon.plus /><b>تسجيل كود وقرار</b><small>كود جديد أو قرار لحالة مسجلة</small></Link>}
           <Link href={`/data?m=${m}`}><Icon.user /><b>استكمال البيانات</b><small>{sc("missing", "needconf")} حالة ناقصة</small></Link>
           <Link href={`/cycle?m=${m}`}><Icon.wallet /><b>دورة الصرف</b><small>{sc("due", "conf")} جاهز للإرسال</small></Link>
           <Link href={`/follow?m=${m}`}><Icon.phone /><b>المتابعة</b><small>{sc("sent", "trans", "wait", "noans")} مستني تأكيد</small></Link>

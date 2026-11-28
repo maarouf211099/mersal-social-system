@@ -23,7 +23,7 @@ export async function exportRows(kind: string, m: string, f: Filter, extra: Reco
     const rows = (await dataList(m)).filter((r) => view === "all" || (view === "noans" ? r.tries >= 3 : r.stage === view && r.tries < 3));
     return { name: `استكمال-البيانات-${m}`, title: `مؤسسة مرسال · الإدارة الاجتماعية — استكمال بيانات الاستلام · ${fmtMonth(m)} · ${rows.length} حالة`,
       rows: [["الكود", "الاسم", "رقم الهاتف", "الناقص", "الخدمات", "محاولات بدون رد", "آخر محاولة", "المسؤول"],
-        ...rows.map((r) => [r.code, r.name, r.phone, r.missing.join("، ") || "محتاجة تأكيد", r.ents.map((e) => e.serviceName + (e.month !== m ? ` (مؤجل ${fmtMonth(e.month)})` : "")).join(" + "), r.tries, r.lastTry ? fmtTs(r.lastTry) : "", r.assignee ? names.name(r.assignee) : ""])] };
+        ...rows.map((r) => [r.code, r.name, r.phone, r.missing.join("، "), r.ents.map((e) => e.serviceName + (e.month !== m ? ` (مؤجل ${fmtMonth(e.month)})` : "")).join(" + "), r.tries, r.lastTry ? fmtTs(r.lastTry) : "", r.assignee ? names.name(r.assignee) : ""])] };
   }
   if (kind === "closing") {
     if (extra.view === "closed") {

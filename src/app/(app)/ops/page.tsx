@@ -38,7 +38,7 @@ export default async function OpsPage({ searchParams }: { searchParams: SP }) {
         <MonthSelect value={m} options={monthOpts(m)} />
         <Link className="btn secondary" href={`/api/export/ops${qs({ m, team, status, by, q })}`}><Icon.download /> CSV</Link>
       </PageHead>
-      {can(u.role, "op") && (
+      {can(u, "op") && (
         <details className="box" id="new" open={!!code} style={{ marginBottom: 14 }}><summary>+ تسجيل عملية</summary>
           <ActionForm action={createOperation} resetOnOk>
             <div className="fgrid" style={{ marginTop: 10 }}>
@@ -80,13 +80,13 @@ export default async function OpsPage({ searchParams }: { searchParams: SP }) {
               <td>{o.count > 1 ? `${o.count} × ` : ""}{Number(o.weight)}</td>
               <td>
                 <Badge tone={o.status === "done" ? "ok" : o.status === "in_progress" ? "info" : ""}>{OP_STATUS_LABELS[o.status]}</Badge>
-                {(o.userId === u.id || can(u.role, "return")) && !o.auto && o.status !== "done" && (
+                {(o.userId === u.id || can(u, "return")) && !o.auto && o.status !== "done" && (
                   <ActionForm action={setOperationStatus} className="inline" feedbackTop={false}>
                     <input type="hidden" name="id" value={o.id} /><input name="result" placeholder="النتيجة" style={{ width: 130 }} />
                     <Submit className="btn secondary small" name="status" value="done" pendingText="…">تم</Submit>
                   </ActionForm>
                 )}
-                {can(u.role, "return") && o.status === "done" && (
+                {can(u, "return") && o.status === "done" && (
                   <details><summary className="muted" style={{ cursor: "pointer" }}>إرجاع</summary>
                     <ActionForm action={returnOperation} className="inline" feedbackTop={false}><input type="hidden" name="id" value={o.id} /><input name="note" placeholder="السبب" required style={{ width: 140 }} /><Submit className="btn danger small" pendingText="…">إرجاع</Submit></ActionForm>
                   </details>

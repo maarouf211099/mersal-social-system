@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { requirePageUser } from "@/lib/auth";
+import { Icon } from "@/components/icons";
 import { prisma } from "@/lib/prisma";
 import { ROLE_DESC, ROLE_LABELS } from "@/lib/perms";
 import { TEAMS } from "@/lib/constants";
@@ -15,7 +17,7 @@ export default async function UsersPage() {
   const users = await prisma.user.findMany({ orderBy: [{ isActive: "desc" }, { name: "asc" }] });
   return (
     <>
-      <PageHead title="المستخدمون والصلاحيات" sub="الصلاحيات تُفحص على السيرفر في كل إجراء. الموظف اللي له حساب في بوابة مرسال بنفس الإيميل يدخل من البوابة مباشرة." />
+      <PageHead title="المستخدمون والصلاحيات" sub="كل موظف ليه صلاحيات دوره، وتقدر تحدد له بالظبط يشوف أنهي صفحات ويعمل أنهي إجراءات من زرار «الصلاحيات». الصلاحيات تُفحص على السيرفر في كل إجراء. الموظف اللي له حساب في بوابة مرسال بنفس الإيميل يدخل من البوابة مباشرة." />
       <div className="grid2">
         <div className="card"><div className="card-title"><h2>إضافة موظف</h2></div>
           <ActionForm action={createUser} resetOnOk>
@@ -47,7 +49,12 @@ export default async function UsersPage() {
                 </ActionForm>
               </td>
               <td className="nowrap">{fmtTs(x.lastLoginAt)}</td>
-              <td><ActionForm action={resetPassword} className="inline" feedbackTop={false}><input type="hidden" name="id" value={x.id} /><Submit className="btn ghost small" pendingText="…">كلمة مرور مؤقتة</Submit></ActionForm></td>
+              <td className="nowrap">
+                <div className="inline">
+                  <Link className="btn secondary small" href={`/admin/users/${x.id}`}><Icon.key /> الصلاحيات{x.perms ? " · مخصصة" : ""}</Link>
+                  <ActionForm action={resetPassword} className="inline" feedbackTop={false}><input type="hidden" name="id" value={x.id} /><Submit className="btn ghost small" pendingText="…">كلمة مرور مؤقتة</Submit></ActionForm>
+                </div>
+              </td>
             </tr>
           ))}
         </Table>

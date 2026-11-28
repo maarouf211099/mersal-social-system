@@ -20,11 +20,11 @@ export default async function DecisionPage({ params }: { params: Promise<{ id: s
     userNames(),
     prisma.auditLog.findMany({ where: { target: d.caseCode, action: { in: ["decision_corrected", "line_corrected", "decision_status", "decision_created", "decision_renewed"] } }, orderBy: { createdAt: "desc" }, take: 30 }),
   ]);
-  const edit = can(u.role, "approve") && d.status === "active";
+  const edit = can(u, "approve") && d.status === "active";
   return (
     <>
       <PageHead title={`قرار ${d.no}`} sub={<><CaseLink code={d.caseCode} name={d.case.name} /> · <Badge tone={d.status === "active" ? "ok" : "bad"}>{DEC_STATUS_LABELS[d.status]}</Badge></>}>
-        {can(u.role, "decision") && <Link className="btn secondary" href={`/decisions/new?renew=${d.id}`}>تجديد</Link>}
+        {can(u, "decision") && <Link className="btn secondary" href={`/decisions/new?renew=${d.id}`}>تجديد</Link>}
       </PageHead>
       <div className="card">
         <div className="kv">

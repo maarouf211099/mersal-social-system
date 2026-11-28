@@ -53,7 +53,7 @@ export async function createDecision(_p: State, f: FormData): Promise<State> {
     const running = await prisma.decisionLine.findMany({ where: { caseCode: code, decision: { status: "active" }, serviceId: { in: lines.map((l) => l.svc.id) } }, include: { decision: true } });
     for (const [i, l] of lines.entries()) {
       const hit = running.find((x) => x.serviceId === l.svc.id && x.beneficiary === l.beneficiary && !(l.end < x.startMonth || l.start > x.endMonth));
-      if (hit && !(override && can(u.role, "decision.override"))) {
+      if (hit && !(override && can(u, "decision.override"))) {
         fail(`الخدمة ${i + 1}: «${l.svc.name}»${l.beneficiary ? ` لـ${l.beneficiary}` : ""} سارية للحالة في قرار ${hit.decision.no} (${fmtMonth(hit.startMonth)} ← ${fmtMonth(hit.endMonth)}). أوقف القرار القديم أولاً أو اطلب مراجعة المشرف.`);
       }
     }

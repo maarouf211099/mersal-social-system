@@ -10,10 +10,10 @@ const base: StageInput = {
 };
 const d = (s: string) => new Date(s);
 
-test("حالة جديدة تحتاج تأكيد ولا يمكن إرسالها", () => {
-  const s = stageOf({ ...base, needsConfirm: true });
-  assert.equal(s, "needconf"); assert.equal(canSend(s), false);
-  assert.equal(stageOf({ ...base, needsConfirm: true, confirmedAt: d("2026-11-02") }), "conf");
+test("حالة جديدة بياناتها كاملة جاهزة للإرسال — والناقصة مش بتتبعت", () => {
+  assert.equal(stageOf({ ...base, needsConfirm: true }), "due");
+  const s = stageOf({ ...base, needsConfirm: true, missing: true });
+  assert.equal(s, "missing"); assert.equal(canSend(s), false);
 });
 test("الشهر المؤجل مش بيعلّق الشهر الجديد — الاتنين يتشغّل عليهم عادي", () => {
   assert.equal(stageOf({ ...base, prevResolved: false }), "due");

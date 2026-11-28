@@ -63,8 +63,8 @@ export default async function DecisionsPage({ searchParams }: { searchParams: SP
                 <td className="nowrap date-cell">{fmtMonth(end)}{eff === "active" && left > 0 && end <= addMonths(cm, st.renewLead) && <span className="cell-sub"><Badge tone="warn">متبقي {left} شهر</Badge></span>}</td>
                 <td><Badge tone={eff === "active" ? "ok" : eff === "ended" ? "" : "bad"}>{DEC_STATUS_LABELS[eff]}</Badge>{d.stopReason && <span className="cell-sub">{d.stopReason}</span>}{d.renewalStatus !== "none" && <span className="cell-sub">{RENEWAL_LABELS[d.renewalStatus]}</span>}{d.needsDonation && <span className="cell-sub"><Badge tone="warn">تحتاج لتبرع</Badge></span>}</td>
                 <td className="nowrap">
-                  {can(u.role, "decision") && <Link className="btn secondary small" href={`/decisions/new?renew=${d.id}`}>تجديد</Link>}{" "}
-                  {d.status === "active" && can(u.role, "decision.stop") && (
+                  {can(u, "decision") && <Link className="btn secondary small" href={`/decisions/new?renew=${d.id}`}>تجديد</Link>}{" "}
+                  {d.status === "active" && can(u, "decision.stop") && (
                     <details style={{ display: "inline-block" }}><summary className="btn danger small">إيقاف / سحب</summary>
                       <div className="card" style={{ position: "absolute", zIndex: 5, width: 300 }}>
                         <ActionForm action={stopDecisions}>

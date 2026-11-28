@@ -9,7 +9,7 @@ export type DataRow = { code: string; name: string; phone: string; missing: stri
 /** «استكمال البيانات»: حالات عندها استحقاق (الشهر أو مؤجل) وبيانات استلامها ناقصة أو محتاجة تأكيد */
 export async function dataList(m: string): Promise<DataRow[]> {
   const st = await getSettings();
-  const ents = (await loadEnts(monthWithDeferred(m), st.followDays)).filter((e) => e.stage === "missing" || e.stage === "needconf");
+  const ents = (await loadEnts(monthWithDeferred(m), st.followDays)).filter((e) => e.stage === "missing");
   const byCase = new Map<string, Ent[]>();
   ents.forEach((e) => byCase.set(e.caseCode, [...(byCase.get(e.caseCode) ?? []), e]));
   const codes = [...byCase.keys()];
@@ -29,6 +29,6 @@ export async function dataList(m: string): Promise<DataRow[]> {
       if (a.answered) done = true; else tries++;
     }
     const t = tasks.find((x) => x.caseCode === code);
-    return { code, name: e.case.name, phone: e.case.phone, missing: e.missing, stage: list.some((x) => x.stage === "missing") ? "missing" : "needconf", ents: list, tries, lastTry, assignee: t?.assigneeId ?? null, taskId: t?.id ?? null } as DataRow;
+    return { code, name: e.case.name, phone: e.case.phone, missing: e.missing, stage: "missing", ents: list, tries, lastTry, assignee: t?.assigneeId ?? null, taskId: t?.id ?? null } as DataRow;
   }).sort((a, b) => a.code.localeCompare(b.code));
 }

@@ -16,8 +16,8 @@ export async function createTask(_p: State, f: FormData): Promise<State> {
     if (!opType && !extra) fail("اختار نوع المهمة.");
     if (opType && !(await prisma.opType.findUnique({ where: { name: opType } }))) fail("نوع المهمة غير موجود.");
     if (code && !(await prisma.case.findUnique({ where: { code } }))) fail("كود الحالة غير مسجل.");
-    if (assignees.some((a) => a !== u.id) && !can(u.role, "assign")) fail("إسناد المهام لغيرك متاح للمشرف فقط.");
-    if (can(u.role, "assign") && !assignees.length) fail("اختار الموظف اللي هتسند له المهمة.");
+    if (assignees.some((a) => a !== u.id) && !can(u, "assign")) fail("إسناد المهام لغيرك متاح للمشرف فقط.");
+    if (can(u, "assign") && !assignees.length) fail("اختار الموظف اللي هتسند له المهمة.");
     if (assignees.length > 1 && (await prisma.user.count({ where: { id: { in: assignees }, isActive: true } })) !== assignees.length) fail("فيه موظف غير موجود أو موقوف.");
     // المدة: عدد أيام (يوم / أسبوع / شهر…) أو تاريخ محدد
     const period = str(f, "period");
@@ -42,7 +42,7 @@ export async function updateTaskStatus(_p: State, f: FormData): Promise<State> {
     const id = str(f, "id"), status = str(f, "status") as "in_progress" | "done" | "stuck", result = str(f, "result");
     const t = await prisma.task.findUniqueOrThrow({ where: { id } });
     if (t.kind !== "manual") fail("هذه المهمة تُنفذ من شاشتها في دورة العمل.");
-    if (t.assigneeId && t.assigneeId !== u.id && !can(u.role, "assign")) fail("المهمة مسندة لموظف آخر.");
+    if (t.assigneeId && t.assigneeId !== u.id && !can(u, "assign")) fail("المهمة مسندة لموظف آخر.");
     if (status === "done" && !result) fail("لا يمكن إغلاق المهمة بدون تسجيل نتيجة التنفيذ.");
     if (status === "stuck" && !result) fail("اكتب سبب التعثر.");
     await prisma.$transaction(async (tx) => {
@@ -120,7 +120,7 @@ export async function setOperationStatus(_p: State, f: FormData): Promise<State>
   return run("op", async (u) => {
     const id = str(f, "id"), status = str(f, "status") as "new" | "in_progress" | "done", result = str(f, "result");
     const o = await prisma.operation.findUniqueOrThrow({ where: { id } });
-    if (o.userId !== u.id && !can(u.role, "return")) fail("تعديل عملية موظف آخر متاح للمشرف فقط.");
+    if (o.userId !== u.id && !can(u, "return")) fail("تعديل عملية موظف آخر متاح للمشرف فقط.");
     if (status === "done" && !(result || o.result)) fail("اكتب النتيجة قبل الإغلاق.");
     await prisma.$transaction(async (tx) => {
       await tx.operation.update({ where: { id }, data: { status, result: result || o.result } });

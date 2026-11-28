@@ -29,7 +29,7 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
     open: { status: OPEN }, unassigned: { status: OPEN, assigneeId: null }, late: { status: OPEN, dueAt: { lt: now } },
     stuck: { status: "stuck" }, done: { status: "done" }, mine: { status: OPEN, assigneeId: u.id },
   };
-  const showForm = one(sp.new) === "1" || can(u.role, "assign");
+  const showForm = one(sp.new) === "1" || can(u, "assign");
   const [rows, names, load, ops] = await Promise.all([
     prisma.task.findMany({ where: { ...base, ...(byView[view] ?? byView.open) }, orderBy: view === "done" ? { completedAt: "desc" } : [{ dueAt: "asc" }], take: 500 }),
     userNames(),
@@ -42,13 +42,13 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
   return (
     <>
       <PageHead title="توزيع المهام" sub={`أضف مهمة من أنواع العمليات وأسندها لموظف أو أكتر بمدة. مهام التأكيد والمتابعة والمعالجة بتتعمل تلقائياً من دورة الصرف (تأكيد ${st.confirmDays} · متابعة ${st.followDays} · معالجة ${st.actionDays} أيام).`}>
-        {can(u.role, "task") && <a className="btn primary" href="#new"><Icon.plus /> مهمة جديدة</a>}
+        {can(u, "task") && <a className="btn primary" href="#new"><Icon.plus /> مهمة جديدة</a>}
       </PageHead>
-      {can(u.role, "task") && (
+      {can(u, "task") && (
         <details className="box new-task" id="new" open={showForm}>
-          <summary>{can(u.role, "assign") ? "إضافة مهمة وإسنادها" : "إضافة مهمة لنفسي"}</summary>
+          <summary>{can(u, "assign") ? "إضافة مهمة وإسنادها" : "إضافة مهمة لنفسي"}</summary>
           <div style={{ marginTop: 12 }}>
-            <TaskForm ops={ops} people={names.active.map((x) => ({ id: x.id, name: x.name, team: x.team }))} canAssign={can(u.role, "assign")} me={{ id: u.id, name: u.name }} />
+            <TaskForm ops={ops} people={names.active.map((x) => ({ id: x.id, name: x.name, team: x.team }))} canAssign={can(u, "assign")} me={{ id: u.id, name: u.name }} />
           </div>
         </details>
       )}
@@ -62,13 +62,13 @@ export default async function TasksPage({ searchParams }: { searchParams: SP }) 
       </div>
       <ActionForm action={assignTasks} resetOnOk>
         <div className="card">
-          {can(u.role, "assign") && (
+          {can(u, "assign") && (
             <div className="toolbar">
               <label className="field"><span>إسناد المحدد إلى</span><select name="to" defaultValue=""><option value="">اختار موظفاً</option>{names.active.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
               <div className="auto"><Submit className="btn primary">إسناد</Submit></div>
             </div>
           )}
-          <TaskTable rows={rows} names={names} caseNames={caseNames} selectable={can(u.role, "assign")} empty="لا توجد مهام في هذا العرض." />
+          <TaskTable rows={rows} names={names} caseNames={caseNames} selectable={can(u, "assign")} empty="لا توجد مهام في هذا العرض." />
         </div>
       </ActionForm>
     </>

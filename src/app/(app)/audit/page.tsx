@@ -23,7 +23,7 @@ const LABELS: Record<string, string> = {
 
 export default async function AuditPage({ searchParams }: { searchParams: SP }) {
   const u = await requirePageUser();
-  if (u.role !== "admin" && u.role !== "supervisor") redirect("/?denied=1");
+  void u; // الوصول بيتحدد من صلاحية صفحة «سجل التدقيق» (افتراضياً المدير والمشرف)
   const sp = await searchParams;
   const q = one(sp.q).trim(), who = one(sp.who), act = one(sp.act);
   const [rows, names] = await Promise.all([

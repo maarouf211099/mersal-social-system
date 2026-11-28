@@ -43,7 +43,7 @@ export default async function CyclePage({ searchParams }: { searchParams: SP }) 
     <>
       <PageHead title="دورة الصرف" sub="اختار النوع والخدمة ← توليد الاستحقاقات ← الكامل بياناته يتبعت في دفعة ← ينزل المتابعة. الناقص بياناته بيكمل الأول في «استكمال البيانات».">
         <MonthSelect value={m} options={monthOpts(m)} />
-        {can(u.role, "generate") && (
+        {can(u, "generate") && (
           <ActionForm action={generateMonth} className="inline"><input type="hidden" name="m" value={m} /><Submit className="btn secondary">توليد استحقاقات {fmtMonth(m)}</Submit></ActionForm>
         )}
       </PageHead>
@@ -70,9 +70,9 @@ export default async function CyclePage({ searchParams }: { searchParams: SP }) 
             <span className="muted">{svcName ?? KINDS.find((k) => k.key === kind)?.label} · {fmtMonth(m)} · <b>{list.length}</b> استحقاق · الإجمالي <b>{money(list.reduce((s, e) => s + e.amountN, 0))}</b> جنيه</span>
             <span className="spacer" />
             {list.length > 0 && <a className="btn secondary" href={exportHref({})}><Icon.download /> تصدير Excel</a>}
-            {can(u.role, "send") && <Submit className="btn primary" name="op" value="send" disabled={!sendable}>{kind === "in_kind" ? "تم التسليم للمحدد" : kind === "card" ? "تم إرسال الكارت للمحدد" : kind === "service" ? "تم التنفيذ للمحدد" : "إرسال المحدد ضمن دفعة"}</Submit>}
+            {can(u, "send") && <Submit className="btn primary" name="op" value="send" disabled={!sendable}>{kind === "in_kind" ? "تم التسليم للمحدد" : kind === "card" ? "تم إرسال الكارت للمحدد" : kind === "service" ? "تم التنفيذ للمحدد" : "إرسال المحدد ضمن دفعة"}</Submit>}
           </div>
-          {kind === "financial" && can(u.role, "transfer") && transferable > 0 && (
+          {kind === "financial" && can(u, "transfer") && transferable > 0 && (
             <details className="box" style={{ marginBottom: 12 }}>
               <summary>تسجيل التحويل للمحدد ({transferable} حالة مُرسلة تنتظر التحويل)</summary>
               <div className="row" style={{ marginTop: 10 }}>

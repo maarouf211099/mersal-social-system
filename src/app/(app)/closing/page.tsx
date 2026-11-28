@@ -40,7 +40,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: SP }
               <span className="spacer" />
               {rows.length > 0 && <a className="btn secondary" href="/api/export/closing?format=xlsx"><Icon.download /> تصدير Excel</a>}
             </div>
-            {can(u.role, "decision.stop") && rows.length > 0 && (
+            {can(u, "decision.stop") && rows.length > 0 && (
               <div className="toolbar">
                 <label className="field grow"><span>سبب الغلق *</span><input name="reason" defaultValue="عدم الوصول للحالة شهرين متتاليين (3 محاولات اتصال بدون رد)" /></label>
                 <div className="auto"><Submit className="btn danger">غلق الخدمة للمحدد</Submit></div>

@@ -89,11 +89,11 @@ export async function generateMonth(_p: State, f: FormData): Promise<State> {
         });
         n++;
         const miss = missingFor.get(l.caseCode) ?? [];
-        if (needsConfirm || miss.length) {
+        if (miss.length) {
           needConf++;
           if (!confTaskFor.has(l.caseCode)) {
             confTaskFor.add(l.caseCode);
-            await tx.task.create({ data: { kind: "confirm", title: miss.length ? `استكمال بيانات الاستلام: ${miss.join("، ")}` : "مكالمة تأكيد بيانات", opType: AUTO_OPS.confirm, caseCode: l.caseCode, entitlementId: e.id, assigneeId: st.assign.confirm || null, dueAt: due(st.confirmDays), createdById: u.id } });
+            await tx.task.create({ data: { kind: "confirm", title: `استكمال بيانات الاستلام: ${miss.join("، ")}`, opType: AUTO_OPS.confirm, caseCode: l.caseCode, entitlementId: e.id, assigneeId: st.assign.confirm || null, dueAt: due(st.confirmDays), createdById: u.id } });
           }
         }
       }
@@ -101,7 +101,7 @@ export async function generateMonth(_p: State, f: FormData): Promise<State> {
       await logAudit(tx, u.id, "month_generated", m, { count: n, needConfirm: needConf });
       return { n, needConf };
     }, { timeout: 120_000 });
-    return `تم توليد ${created.n} استحقاق لـ${fmtMonth(m)}${created.needConf ? ` · ${created.needConf} محتاج استكمال أو تأكيد بيانات (في «استكمال البيانات»)` : ""}.`;
+    return `تم توليد ${created.n} استحقاق لـ${fmtMonth(m)}${created.needConf ? ` · ${created.needConf} بيانات استلامه ناقصة (في «استكمال البيانات»)` : ""}.`;
   });
 }
 
@@ -115,7 +115,7 @@ export async function confirmData(_p: State, f: FormData): Promise<State> {
     const ent = await loadEnt(id, st.followDays);
     if (!ent) fail("الاستحقاق غير موجود.");
     const e = ent!;
-    if (e.stage !== "needconf" && e.stage !== "missing") fail("بيانات هذه الحالة مكتملة ومؤكدة بالفعل.");
+    if (e.stage !== "missing") fail("بيانات الاستلام لهذه الحالة مكتملة بالفعل.");
     if (!result) fail("اختار نتيجة المكالمة.");
     if (result === "no_answer") {
       const tries = await prisma.contactAttempt.count({ where: { entitlement: { caseCode: e.caseCode }, kind: "confirm", voided: false, answered: false, createdAt: { gte: addDays(new Date(), -40) } } });

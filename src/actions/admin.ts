@@ -2,9 +2,10 @@
 
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
-import type { Role } from "@prisma/client";
+import { Prisma, type Role } from "@prisma/client";
+import { ACTION_LABELS, PAGES } from "@/lib/perms";
 import { prisma } from "@/lib/prisma";
-import { fail, num, run, str, type State } from "@/lib/action";
+import { fail, num, run, str, strs, type State } from "@/lib/action";
 import { ActionError, requireAction } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { getSettings } from "@/lib/settings";
@@ -119,4 +120,20 @@ export async function importData(_p: State, f: FormData): Promise<State> {
     console.error(e);
     return { error: `فشل الاستيراد ولم يُحفظ شيء: ${(e as Error).message}` };
   }
+}
+
+/** صلاحيات موظف بعينه: يشوف أنهي صفحات ويعمل أنهي إجراءات (أو يرجع لصلاحيات دوره) */
+export async function saveUserPerms(_p: State, f: FormData): Promise<State> {
+  return run("admin", async (u) => {
+    const id = str(f, "id");
+    const target = await prisma.user.findUniqueOrThrow({ where: { id } });
+    if (target.role === "admin") fail("المدير عنده كل الصلاحيات دايماً.");
+    const reset = str(f, "reset") === "1";
+    const pages = strs(f, "page").filter((k) => PAGES.some((p) => p.key === k));
+    const actions = strs(f, "action").filter((k) => ACTION_LABELS.some(([p]) => p === k));
+    const perms = reset ? null : { pages, actions };
+    await prisma.user.update({ where: { id }, data: { perms: perms ?? Prisma.DbNull } });
+    await prisma.auditLog.create({ data: { userId: u.id, action: "user_perms", target: target.email, meta: { old: (target.perms as object) ?? "role", new: perms ?? "role" } } });
+    return reset ? `رجعت صلاحيات ${target.name} لصلاحيات دوره.` : `اتحفظت صلاحيات ${target.name}: ${pages.length} صفحة · ${actions.length} إجراء.`;
+  });
 }
